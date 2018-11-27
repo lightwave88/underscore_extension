@@ -50,7 +50,7 @@
     function workerFactory(global) {
         // worker 本體
         console.log('i am worker');
-        const __;
+        let $_;
 
         self.addEventListener('message', function (e) {
             debugger;
@@ -64,17 +64,17 @@
             let id = data.id || 0;
             //----------------------------
             // load _.script
-            if (__ == null) {
+            if ($_ == null) {
                 importScripts(scriptPath);
                 importScripts(extensionPath);
-                __ = self._;
+                $_ = self._;
             }
             //----------------------------
-            if (!command && typeof __[command] !== 'function') {
+            if (!command && typeof $_[command] !== 'function') {
                 throw new TypeError('no assign fun');
             }
             // _ 的運算
-            let res = __[command].apply(__, args);
+            let res = $_[command].apply($_, args);
             //----------------------------
             // console.log("worker(%s) done", id);
             self.postMessage({
