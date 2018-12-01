@@ -29,9 +29,10 @@
             // console.log("worker")
 
             if (typeof (global._) === "undefined") {
-                // worker 本體建構
+                // worker环境，但尚未载入 _
                 return;
             }
+            // worker环境，已载入 _
             _ = global._;
 
             // 建構
@@ -122,55 +123,69 @@
             //----------------------------
             if (prev_template) {
 
-                if(template && template.id == prev_template.id){
+                if (template && template.id == prev_template.id) {
                     // template 相同
                     return p;
-                }else{
+                } else {
                     prev_template.unmount(dom);
                 }
-
             }
             //----------------------------
-            if (template == null) {
-                // 清空
-                dom.innerHTML = "";
+            let promise;
 
-                return p;
+            if (template == null) {
+                return p.then(function () {
+                    // 沒有指派 template，所以清空 html
+                    dom.innerHTML = "";
+                });
             } else {
                 // template 是否還在 loading
-                let loaded = template.isLoaded();
+                let resolve_callback;
+                let reject_callback;
 
-                if (!loaded && loading_callback) {
+                if (!template.isLoaded()) {
+                    // template 尚未 loaded
 
-                    // trmplate 正在 loading
-                    loading_callback.call(dom, dom);
+                    if (loading_callback) {
+                        // trmplate 正在 loading
+                        loading_callback.call(dom, dom);
+                    }
+                    //-----------------------
+
+                    resolve_callback = function (data) {
+                        // 登陸
+                        $(dom).data("asyncTemplate", template);
+
+                        if (loaded_callback) {
+                            loaded_callback.call(dom, undefined, dom);
+                        }
+                        template.mount(dom);
+                        return data;
+                    };
+
+                    reject_callback = function (err) {
+                        // err
+                        if (loaded_callback) {
+                            loaded_callback.call(dom, err, dom);
+                        }
+                        throw err;
+                    };
+
+                } else {
+                    // template 早已 loaded
+
+                    resolve_callback = function (data) {
+                        // 登陸
+                        $(dom).data("asyncTemplate", template);
+                        template.mount(dom);
+                        return data;
+                    };
+
+                    reject_callback = undefined;
                 }
+
                 //----------------------------
-                template.promise.then(function (data) {
-                    // loaded
-
-                    // 登陸
-                    $(dom).data("asyncTemplate", template);
-
-                    if (loaded_callback) {
-                        loaded_callback.call(dom, undefined, dom);
-                    }
-
-                    template.mount(dom);
-
-                    return data;
-                }, function (err) {
-                    // err
-                    template.unmount(dom);
-
-                    if (loaded_callback) {
-                        loaded_callback.call(dom, err, dom);
-                    }
-
-                    throw err;
-                });
-                //----------------------------
-                return template.promise;
+                return template.promise.then(resolve_callback, reject_callback);
             }
         };
 
@@ -191,8 +206,8 @@
             instance = templateItemMap[name];
         } else {
 
-            if(templateItemMap[name]){
-                throw new Error("template("+name+") has exists");
+            if (templateItemMap[name]) {
+                throw new Error("template(" + name + ") has exists");
             }
 
             // 新增一個 template
@@ -215,6 +230,8 @@
     // 代表每個 template
     // 只做一次性 load
     function TemplateItem(options) {
+        'use strict';
+        
         this.id;
         this.fn = asyncTemplate;
 
@@ -457,10 +474,10 @@
 
             let fn;
             let res;
-            try{
+            try {
                 fn = new Function(command);
                 res = fn();
-            }catch(e){
+            } catch (e) {
                 console.log("script have problem");
                 throw e;
             }
