@@ -1,8 +1,11 @@
 !(function (global) {
-    // debugger;
+    debugger;
+
+    // 试別是否被 extension 過
+    let $_; 
     
     (function () {
-        
+
         if (typeof window !== "undefined" && typeof document !== "undefined") {
                                    factory(window._);
         } else if (typeof module !== 'undefined' && module.exports) {
@@ -26,11 +29,11 @@
         }
     }());
     //==========================================================================
-    let $_; // 識別是否被 extension 過
     
+
     // 工廠函式
     function factory(_) {
-        // debugger;
+        debugger;
 
         if($_ == null){
             $_ = _;
@@ -91,7 +94,7 @@
         }());
         //======================================================================
 
-        if (_.getScriptPath == null) {
+        if (typeof _.getScriptPath === 'undefined') {
             _.mixin({
                 // worker 需要的功能
                 // 為手動取得(underscode|lodash)的位址
@@ -125,7 +128,7 @@
             });
         }
         //----------------------------
-        if (_.defineProperty == null) {
+        if (typeof _.defineProperty === 'undefined') {
             _.mixin({
                 // (Object.defineProperty)的封裝
                 defineProperty: function (obj, key, val, enumerable) {
@@ -139,12 +142,12 @@
             });
         }
         //----------------------------
-        if (_.isPlainObject == null) {
+        if (typeof _.isPlainObject === 'undefined') {
             _.mixin({
                 // 是否是 {}
                 // fix
                 isPlainObject: function (obj) {
-                    // debugger;
+                    debugger;
 
                     if (typeof obj != "object") {
                         return false;
@@ -164,12 +167,19 @@
                         return false;
                     }
 
+                    let keyList = Object.keys(obj);
+                    let ownerKeyList = Object.getOwnPropertyNames(obj);
+
+                    if (keyList.length != ownerKeyList.length) {
+                        return false;
+                    }
+
                     return true;
                 }
             });
         }
         //----------------------------
-        if (_.getClass == null) {
+        if (typeof _.getClass === 'undefined') {
 
             _.mixin({
                 // 比系統 typeof 能辨識更多 type
