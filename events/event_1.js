@@ -34,7 +34,7 @@
 
     // 取得 extention 全域變數
     let $extension = _.$$extension;
-    
+
 
     // 給予每一個(事件單體)一個可以辨識的 id
     let handle_guid = 1;
@@ -452,15 +452,7 @@
             _.defineProperty(callback, "_bc_eventGuid", $extension.callback_guid++, false);
         }
 
-        let _callback = callback;
 
-        if (once) {
-            _callback = function () {
-                self.off(name, _callback);
-                callback.apply(this, arguments);
-            };
-            _callback._bc_eventGuid = callback._bc_eventGuid;
-        }
         //----------------------------
         var names = name.split(/\s+/);
 
@@ -468,6 +460,17 @@
             let name = names[i];
 
             let eventList = events[name] || (events[name] = []);
+
+            let _callback = callback;
+
+            if (once) {
+                _callback = function () {
+                    // name error 闭包关系
+                    self.off(name, _callback);
+                    callback.apply(this, arguments);
+                };
+                _callback._bc_eventGuid = callback._bc_eventGuid;
+            }
 
             eventList.push(new EventHandle({
                 callback: _callback,
@@ -538,6 +541,7 @@
             let _callback = callback;
             if (once) {
                 _callback = function () {
+                    // name error 闭包关系
                     self.stopListening(obj, name, _callback);
                     callback.apply(this, arguments);
                 };
