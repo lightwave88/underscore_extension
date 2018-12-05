@@ -183,22 +183,22 @@
         (function (_self) {
             _self.on = function (name, callback, context) {
                 'use strict';
-                return $_on.apply(this, [name, callback, context]);
+                return $_on.call(this, name, callback, context);
             };
             //------------------------------------------------------------------
             _self.once = function (name, callback, context) {
                 'use strict';
-                return $_on.apply(this, [name, callback, context, true]);
+                return $_on.call(this, name, callback, context, true);
             };
             //------------------------------------------------------------------
             _self.listenTo = function (obj, name, callback, context) {
                 'use strict';
-                return $_listenTo.apply(this, [obj, name, callback, context]);
+                return $_listenTo.call(this, obj, name, callback, context);
             };
             //------------------------------------------------------------------
             _self.listenToOnce = function (obj, name, callback, context) {
                 'use strict';
-                return $_listenTo.apply(this, [obj, name, callback, context, true]);
+                return $_listenTo.call(this, obj, name, callback, context, true);
             };
             //------------------------------------------------------------------
             // callback 是否被設定過
@@ -327,62 +327,11 @@
             //------------------------------------------------------------------
             // 只刪除自己註冊的事件
             // 別物件傾聽自己的不會被刪除
-            // return: (boolean) => 是否有找到該 callback 並移除
             _self.off = function (name, callback) {
                 'use strict';
 
-                debugger;
+                $_off.call(this, name, callback);
 
-                let res = false;
-
-                if (callback != null && typeof callback["__$$us_eventGuid"] === "undefined") {
-                    // callback 未註冊過
-                    return res;
-                }
-                //----------------------------
-                let self_eventData = this["__$$us_eventData"];
-                let self_id = self_eventData.id;
-                let events = self_eventData.events;
-
-                let names = (name ? name.split(EventSetting.eventSplitter) : Object.keys(events));
-
-                for (let j = 0, name; name = names[j]; j++) {
-
-                    let eventList = events[name];
-
-                    if (!Array.isArray(eventList)) {
-                        continue;
-                    }
-
-                    let remaining = [];
-
-                    for (let i = 0; i < eventList.length; i++) {
-                        let handle = eventList[i];
-
-                        let isCallback = (function () {
-                            if (callback == null) {
-                                // 若沒有指定要移除的 fn
-                                // 那就移除所有
-                                return true;
-                            }
-                            return (handle.callback["__$$us_eventGuid"] == callback["__$$us_eventGuid"]);
-                        }());
-
-                        let listener_id = handle.listener["__$$us_eventData"]["id"];
-                        if (isCallback && listener_id == self_id) {
-                        } else {
-                            remaining.push(handle);
-                        }
-                    }
-                    //----------------------------
-                    // debugger;
-                    if (remaining.length) {
-                        events[name] = remaining;
-                    } else {
-                        delete events[name];
-                    }
-                }
-                //----------------------------
                 return this;
             };
             //------------------------------------------------------------------
@@ -393,93 +342,8 @@
             _self.clearListener = function (obj, name, callback) {
                 'use strict';
 
-                debugger;
+                $_clearListener.call(this, obj, name, callback);
 
-                // _checkHasInitialized(obj);
-
-                if (callback != null && typeof callback["__$$us_eventGuid"] === "undefined") {
-                    // callback 未註冊過
-                    return this;
-                }
-                //----------------------------
-                let self_eventData = this["__$$us_eventData"];
-                let events = self_eventData.events;
-
-                let self_id = self_eventData.id;
-
-                let listener_eventData;
-                let listener_id;
-
-                if (obj != null && typeof (obj) === "object" &&
-                    typeof (obj["__$$us_eventData"]) != "undefined") {
-                    listener_eventData = obj["__$$us_eventData"];
-                    listener_id = listener_eventData["id"]
-                }
-                //----------------------------
-                let names = (name ? name.split(EventSetting.eventSplitter) : _.keys(events));
-                // 回圈所有種類的事件
-                for (let j = 0, name; name = names[j]; j++) {
-
-                    let eventList = events[name];
-
-                    if (!Array.isArray(eventList)) {
-                        continue;
-                    }
-
-                    let remaining = [];
-
-                    for (let i = 0; i < eventList.length; i++) {
-                        let handle = eventList[i];
-
-                        // 是否是要找的 callback
-                        let isCallback = (function () {
-                            if (callback == null) {
-                                return true;
-                            }
-                            return (handle.callback["__$$us_eventGuid"] !== callback["__$$us_eventGuid"]);
-                        }());
-
-                        let listener_match;
-
-                        if (obj != null) {
-                            // 移除指定監聽者
-
-                            if (listener_id != null && handle.listener["__$$us_eventData"]["id"] == listener_id) {
-                                listener_match = true;
-                            } else {
-                                listener_match = false;
-                            }
-                        } else {
-                            // 沒有指定監聽者
-                            // 移除非自己的所有監聽者
-
-                            if (handle.listener["__$$us_eventData"]["id"] != self_id) {
-                                listener_match = true;
-                            } else {
-                                listener_match = false;
-                            }
-                        }
-                        //----------------------------
-                        if (isCallback && listener_match) {
-                            let listenInfo = handle.listenInfo;
-                            // handle match
-                            if (--listenInfo.count == 0) {
-                                // 刪除兩物件間的橋樑
-                                Tool.clearBridge(listenInfo);
-                            }
-                        } else {
-                            remaining.push(handle);
-                        }
-                    }
-                    //----------------------------
-                    // debugger;
-                    if (remaining.length) {
-                        self_eventData.events[name] = remaining;
-                    } else {
-                        delete self_eventData.events[name];
-                    }
-                }
-                //----------------------------
                 return this;
             };
             //------------------------------------------------------------------
@@ -647,7 +511,7 @@
         }
         //----------------------------------------------------------------------
         // 設置跨物件間的監聽
-        function $_listenTo(eventMaker, name, callback, context, once) {
+        function $_listenTo(d, name, callback, context, once) {
             debugger;
 
             Tool.checkHasInitialized(eventMaker);
@@ -709,7 +573,7 @@
                 if (events[name] == null) {
                     events[name] = [];
 
-                    if(Tool.isDom(this)){
+                    if (Tool.isDom(this)) {
                         this.addEventListener(name, Tool.event_dispatcher);
                     }
                 }
@@ -743,10 +607,147 @@
 
         function $_off(name, callback) {
 
+            if (callback != null && typeof callback["__$$us_eventGuid"] === "undefined") {
+                // callback 未註冊過
+                return res;
+            }
+            //----------------------------
+            let self_eventData = this["__$$us_eventData"];
+            let self_id = self_eventData.id;
+            let events = self_eventData.events;
+
+            let names = (name ? name.split(EventSetting.eventSplitter) : Object.keys(events));
+
+            for (let j = 0, name; name = names[j]; j++) {
+
+                let eventList = events[name];
+
+                if (!Array.isArray(eventList)) {
+                    continue;
+                }
+
+                let remaining = [];
+
+                for (let i = 0; i < eventList.length; i++) {
+                    let handle = eventList[i];
+
+                    let isCallback = (function () {
+                        if (callback == null) {
+                            // 若沒有指定要移除的 fn
+                            // 那就移除所有
+                            return true;
+                        }
+                        return (handle.callback["__$$us_eventGuid"] == callback["__$$us_eventGuid"]);
+                    }());
+
+                    let listener_id = handle.listener["__$$us_eventData"]["id"];
+                    if (isCallback && listener_id == self_id) {
+                    } else {
+                        remaining.push(handle);
+                    }
+                }
+                //----------------------------
+                // debugger;
+                if (remaining.length > 0) {
+                    events[name] = remaining;
+                } else {
+                    delete events[name];
+                    if(Tool.isDom(this)){
+                        // 移除事件转派者
+                        this.removeEventListener(name, Tool.event_dispatcher); 
+                    }
+                }
+            }
         }
-
+        // 问题点比较多的地方
+        // 多看几次
         function $_clearListener(obj, name, callback) {
+            if (callback != null && typeof callback["__$$us_eventGuid"] === "undefined") {
+                // callback 未註冊過
+                return this;
+            }
+            //----------------------------
+            let self_eventData = this["__$$us_eventData"];
+            let events = self_eventData.events;
 
+            let self_id = self_eventData.id;
+
+            let listener_eventData;
+            let listener_id;
+
+            if (obj != null && typeof (obj) === "object" &&
+                typeof (obj["__$$us_eventData"]) != "undefined") {
+                listener_eventData = obj["__$$us_eventData"];
+                listener_id = listener_eventData["id"]
+            }
+            //----------------------------
+            let names = (name ? name.split(EventSetting.eventSplitter) : _.keys(events));
+            // 回圈所有種類的事件
+            for (let j = 0, name; name = names[j]; j++) {
+
+                let eventList = events[name];
+
+                if (!Array.isArray(eventList)) {
+                    continue;
+                }
+
+                let remaining = [];
+
+                for (let i = 0; i < eventList.length; i++) {
+                    let handle = eventList[i];
+
+                    // 是否是要找的 callback
+                    let isCallback = (function () {
+                        if (callback == null) {
+                            return true;
+                        }
+                        return (handle.callback["__$$us_eventGuid"] !== callback["__$$us_eventGuid"]);
+                    }());
+
+                    let listener_match;
+
+                    if (obj != null) {
+                        // 移除指定監聽者
+
+                        if (listener_id != null && handle.listener["__$$us_eventData"]["id"] == listener_id) {
+                            listener_match = true;
+                        } else {
+                            listener_match = false;
+                        }
+                    } else {
+                        // 沒有指定監聽者
+                        // 移除非自己的所有監聽者
+
+                        if (handle.listener["__$$us_eventData"]["id"] != self_id) {
+                            listener_match = true;
+                        } else {
+                            listener_match = false;
+                        }
+                    }
+                    //----------------------------
+                    if (isCallback && listener_match) {
+                        let listenInfo = handle.listenInfo;
+                        // handle match
+                        if (--listenInfo.count == 0) {
+                            // 刪除兩物件間的橋樑
+                            Tool.clearBridge(listenInfo);
+                        }
+                    } else {
+                        remaining.push(handle);
+                    }
+                }
+                //----------------------------
+                // debugger;
+                if (remaining.length) {
+                    self_eventData.events[name] = remaining;
+                } else {
+                    delete self_eventData.events[name];
+                    if(Tool.isDom(this)){
+                        // 移除事件转派者
+                        this.removeEventListener(name, Tool.event_dispatcher);
+                    }
+                }
+            }
         }
 
         function $_stopListening(obj, name, callback) {
