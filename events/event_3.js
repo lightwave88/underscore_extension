@@ -157,26 +157,26 @@
             fn.on = function (obj, name, callback, context) {
                 Tool.checkInitialized(obj);
                 __on.call(obj, name, callback, context);
-                return fn; 
+                return fn;
             };
             //------------------------------------------------------------------
             fn.once = function (obj, name, callback, context) {
                 Tool.checkInitialized(obj);
                 __on.call(obj, name, callback, context, true);
-                return fn; 
+                return fn;
             };
             //------------------------------------------------------------------
             fn.listenTo = function (obj, eventMaker, name, callback, context) {
-                
+
                 Tool.checkInitialized(obj);
                 Tool.checkInitialized(eventMaker);
 
                 __listenTo.call(obj, eventMaker, name, callback, context);
-                return fn; 
+                return fn;
             };
             //------------------------------------------------------------------
             fn.listenToOnce = function (obj, eventMaker, name, callback, context) {
-                
+
                 Tool.checkInitialized(obj);
                 Tool.checkInitialized(eventMaker);
 
@@ -185,8 +185,8 @@
             };
             //------------------------------------------------------------------
             fn.hasOn = function (obj, name, callback) {
-                
-                if(!Tool.checkObj(obj)){
+
+                if (!Tool.checkObj(obj)) {
                     return false;
                 }
 
@@ -194,16 +194,16 @@
             };
             //------------------------------------------------------------------
             fn.hasListenTo = function (obj, eventMaker, name, callback) {
-                if(!Tool.checkObj(obj) || !Tool.checkObj(eventMaker)){
+                if (!Tool.checkObj(obj) || !Tool.checkObj(eventMaker)) {
                     return false;
                 }
-                
+
                 return __hasListenTo.call(obj, eventMaker, name, callback);
             };
             //------------------------------------------------------------------
             fn.off = function (obj, name, callback) {
 
-                if(!Tool.checkObj(obj)){
+                if (!Tool.checkObj(obj)) {
                     return fn;
                 }
                 __off.call(obj, name, callback);
@@ -212,30 +212,30 @@
             };
             //------------------------------------------------------------------
             fn.clearListener = function (obj, eventMaker, name, callback) {
-                
-                if(!Tool.checkObj(obj) || !Tool.checkObj(eventMaker)){
+
+                if (!Tool.checkObj(obj) || !Tool.checkObj(eventMaker)) {
                     return fn;
                 }
-                
-                __clearListener.call(obj, eventMaker,name, callback);
+
+                __clearListener.call(obj, eventMaker, name, callback);
 
                 return fn;
             };
             //------------------------------------------------------------------
             fn.stopListening = function (obj, eventMaker, name, callback) {
-                
-                if(!Tool.checkObj(obj) || !Tool.checkObj(eventMaker)){
+
+                if (!Tool.checkObj(obj) || !Tool.checkObj(eventMaker)) {
                     return fn;
                 }
-                
-                __stopListening.call(obj, eventMaker,name, callback);
+
+                __stopListening.call(obj, eventMaker, name, callback);
 
                 return fn;
             };
             //------------------------------------------------------------------
             fn.trigger = function (obj, eventName) {
                 Tool.checkInitialized(obj);
-                
+
                 let args = Array.from(arguments);
                 args = args.splice(2);
 
@@ -351,9 +351,9 @@
         //======================================================================
         // 設置本身的監聽
         function __on(name, callback, context, once) {
-            debugger;
+            // debugger;
             let self = this;
-            
+
             let eventData = this["__$$us_eventData"];
 
             let events = eventData.events;
@@ -367,7 +367,7 @@
             let names = name.split(eventSetting.eventSplitter);
 
             for (let i = 0; i < names.length; i++) {
-                debugger;
+                // debugger;
                 let name = names[i];
 
                 if (events[name] == null) {
@@ -390,13 +390,11 @@
                     context: (context || this)
                 }));
             }
-
-            return this;
         }
         //----------------------------------------------------------------------
         // 設置跨物件間的監聽
         function __listenTo(eventMaker, name, callback, context, once) {
-            debugger;
+            // debugger;
 
             Tool.checkInitialized(eventMaker);
 
@@ -491,8 +489,8 @@
 
             if (events[name] == null) {
                 return false;
-            }else{
-                if(!callback){
+            } else {
+                if (!callback) {
                     return true;
                 }
             }
@@ -598,16 +596,16 @@
         //----------------------------------------------------------------------
         function __off(name, callback) {
 
-            if (callback != null && typeof callback["__$$us_eventGuid"] === "undefined") {
+            if (callback != null && callback["__$$us_eventGuid"] == null) {
                 // callback 未註冊過
-                return res;
+                return;
             }
             //----------------------------
             let self_eventData = this["__$$us_eventData"];
             let self_id = self_eventData.id;
             let events = self_eventData.events;
 
-            let names = (name ? name.split(eventSetting.eventSplitter) : Object.keys(events));
+            let names = (name != null ? name.split(eventSetting.eventSplitter) : Object.keys(events));
 
             for (let j = 0, name; name = names[j]; j++) {
 
@@ -648,15 +646,15 @@
                         Tool.unBindDomEvent(this, name, Tool.event_dispatcher);
                     }
                 }
+                //----------------------------
             }
         }
         //----------------------------------------------------------------------
-        // 问题点比较多的地方
-        // 多看几次
+        // 清除所有监听自己者
         function __clearListener(obj, name, callback) {
-            if (callback != null && typeof callback["__$$us_eventGuid"] === "undefined") {
+            if (callback != null && callback["__$$us_eventGuid"] == null) {
                 // callback 未註冊過
-                return this;
+                return;
             }
             //----------------------------
             let self_eventData = this["__$$us_eventData"];
@@ -667,13 +665,12 @@
             let listener_eventData;
             let listener_id;
 
-            if (obj != null && typeof (obj) === "object" &&
-                typeof (obj["__$$us_eventData"]) != "undefined") {
+            if (obj != null && typeof (obj) == "object" && obj["__$$us_eventData"] != null) {
                 listener_eventData = obj["__$$us_eventData"];
-                listener_id = listener_eventData["id"]
+                listener_id = listener_eventData["id"];
             }
             //----------------------------
-            let names = (name ? name.split(eventSetting.eventSplitter) : _.keys(events));
+            let names = (name ? name.split(eventSetting.eventSplitter) : Object.keys(events));
             // 回圈所有種類的事件
             for (let j = 0, name; name = names[j]; j++) {
 
@@ -719,18 +716,17 @@
                     //----------------------------
                     if (isCallback && listener_match) {
                         let connectInfo = handle.connectInfo;
-                        // handle match
-                        if (--connectInfo.count == 0) {
-                            // 刪除兩物件間的橋樑
-                            Tool.clearBridge(connectInfo);
-                        }
+
+                        // 刪除兩物件間的橋樑
+                        Tool.clearBridge(connectInfo);
+
                     } else {
                         remaining.push(handle);
                     }
                 }
                 //----------------------------
                 // debugger;
-                if (remaining.length) {
+                if (remaining.length > 0) {
                     self_eventData.events[name] = remaining;
                 } else {
                     delete self_eventData.events[name];
@@ -742,16 +738,16 @@
             }
         }
         //----------------------------------------------------------------------
-        function __stopListening(obj, name, callback) {
-            if (callback != null && typeof callback["__$$us_eventGuid"] === "undefined") {
+        function __stopListening(eventMaker, name, callback) {
+            if (callback != null && callback["__$$us_eventGuid"] == null) {
                 // callback 未註冊過
-                return this;
+                return;
             }
 
             let self_eventData = this["__$$us_eventData"];
             let self_id = self_eventData.id;
 
-            if (obj === undefined) {
+            if (eventMaker == null) {
                 // 移除與所有發射者間的關係
                 // connectInfo 唯一的用處
                 let listeningToList;
@@ -759,16 +755,18 @@
                     for (let key in listeningToList) {
                         connectInfo = listeningToList[key];
                         let target = connectInfo.listeningTo;
-                        this.stopListening(target);
+                        __stopListening.call(this, target);
                     }
                 }
                 return this;
             }
             //----------------------------
 
-            Tool.checkInitialized(obj);
+            if (!Tool.checkObj(eventMaker)) {
+                return;
+            }
 
-            let target_eventData = obj["__$$us_eventData"];
+            let target_eventData = eventMaker["__$$us_eventData"];
             let target_id = target_eventData.id;
             let events = target_eventData.events;
 
@@ -805,11 +803,10 @@
                     if (isCallback && isListener) {
 
                         let connectInfo = handle.connectInfo;
-                        // handle match
-                        if (--connectInfo.count == 0) {
-                            // 刪除兩物件間的橋樑
-                            Tool.clearBridge(connectInfo);
-                        }
+
+                        // 刪除兩物件間的橋樑
+                        Tool.clearBridge(connectInfo);
+
                     } else {
                         // handle 沒有 match
                         remaining.push(handle);
@@ -817,10 +814,13 @@
                 }
                 //----------------------------
                 // debugger;
-                if (remaining.length) {
+                if (remaining.length > 0) {
                     events[name] = remaining;
                 } else {
                     delete events[name];
+                    if (Tool.isDom(eventMaker)) {
+                        Tool.unBindDomEvent(eventMaker, name, Tool.event_dispatcher);
+                    }
                 }
             }
         }
@@ -839,16 +839,32 @@
             let events = eventData.events;
             //----------------------------
             let eventList;
-            // eventName = all
-            let all_eventList = (Array.isArray(events['all']) ? events['all'].slice() : undefined);
+
+            let data = {
+                args: args,
+                triggerEvent: eventName
+            };
+
+            data.target = this;
 
             if (!/^all$/i.test(eventName)) {
-                eventList = (Array.isArray(events[eventName]) ? events[eventName].slice() : undefined);
-                Too.triggerEvents(this, eventList, args, eventName, eventName, domEvent);
+                eventList = events[eventName];
+                eventList = ((Array.isArray(eventList) && eventList.length > 0) ? events[eventName].slice() : undefined);
+
+                if (eventList) {
+                    data.eventList = eventList;
+                    data.registEventName = eventName;
+                    Tool.triggerEvents(data, domEvent);
+                }
             }
             //----------------------------
-            if (all_eventList) {
-                Tool.triggerEvents(this, all_eventList, args, 'all', eventName, domEvent);
+            eventList = events['all'];
+            eventList = ((Array.isArray(eventList) && eventList.length > 0)? events['all'].slice() : undefined);
+
+            if (eventList) {
+                data.eventList = eventList;
+                data.registEventName = eventName;
+                Tool.triggerEvents(data, domEvent);
             }
         }
 
@@ -874,13 +890,13 @@
             };
 
             // 物件是否具有 event 的能力
-            _s.checkObj = function(obj){
-                
+            _s.checkObj = function (obj) {
+
                 if (obj == null || typeof (obj) != "object") {
                     return false;
                 }
 
-                if(obj["__$$us_eventData"] == null){
+                if (obj["__$$us_eventData"] == null) {
                     return false;
                 }
 
@@ -918,6 +934,11 @@
             // 清除兩者間的關係紀錄
             _s.clearBridge = function (connectInfo) {
 
+                if (--connectInfo.count > 0) {
+                    // 彼此之间还有引用
+                    return;
+                }
+
                 let listener = connectInfo.listener;
                 let listeningTo = connectInfo.listeningTo;
 
@@ -950,23 +971,31 @@
             };
             //------------------------------------------------------------------
             // 發出訊息
-            _s.triggerEvents = function (target, eventList, args, eventName, triggerEvent, domEvent) {
+            _s.triggerEvents = function (data, domEvent) {
                 debugger;
 
-                let handle;
-                let handle_id;
+                let target = data.target;
+                let eventList = data.eventList;
+                let args = data.args;
+                // 註冊的 eventName
+                let registEventName = data.registEventName;
+
+                // emit 的 eventName
+                let triggerEvent = data.triggerEvent;
+
                 //----------------------------
                 for (let i = 0; i < eventList.length; i++) {
 
                     // debugger;
-                    handle = eventList[i];
-                    handle_id = handle.id;
+                    let handle = eventList[i];
+                    let handle_id = handle.id;
 
                     // 監聽者
                     let _listener = handle.listener;
+                    // let _listenTo = handle.listeningTo;
 
                     // 確保事件尚存
-                    let result = Tool.findHandle(target, eventName, handle);
+                    let result = Tool.findHandle(target, registEventName, handle);
 
                     if (!result) {
                         continue;
@@ -978,14 +1007,15 @@
                     // 事件本體
                     let e = domEvent || {
                         target: target,
-                        type: triggerEvent
+                        type: triggerEvent,
+                        currentTarget: _listener
                     };
 
                     _arg.unshift(e);
 
-                    let job = (function (args) {
-                        handle.callback.apply(this, args);
-                    }).bind(handle.context, _arg)
+                    let job = (function (callback, args) {
+                        callback.apply(this, args);
+                    }).bind(handle.context, handle.callback, _arg)
                     //----------------------------
                     job();
                 }
@@ -1013,7 +1043,8 @@
             // _event.once()
             _s.getOnceEventCallback_1 = function (eventName, callback, context) {
                 function _callback() {
-                    _.event.off(context, eventName, _callback);
+                    debugger;
+                    __off.call(context, eventName, _callback);
                     callback.apply(this, arguments);
                 }
                 _.defineProperty(_callback, "__$$us_eventGuid", callback["__$$us_eventGuid"], false);
@@ -1024,7 +1055,8 @@
             // _event.listenToOnce()
             _s.getOnceEventCallback_2 = function (eventMaker, eventName, callback, context) {
                 function _callback() {
-                    _.event.stopListening(context, eventMaker, eventName, _callback);
+                    debugger;
+                    __stopListening.call(context, eventMaker, eventName, _callback);
                     callback.apply(this, arguments);
                 }
                 _.defineProperty(_callback, "__$$us_eventGuid", callback["__$$us_eventGuid"], false);
