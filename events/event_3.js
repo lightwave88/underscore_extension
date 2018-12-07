@@ -47,8 +47,24 @@
         ////////////////////////////////////////////////////////////////////////
         const Tool = {};
 
+        // 事件的藍圖
+        const Event = {};
+
+        // 設定文件
+        const eventSetting = {};
+
+        (function () {
+            // Regular expression used to split event strings.
+            this.eventSplitter = /\s+/;
+
+            this.eventNamePrefix = 'usEvent';
+
+
+        }).call(eventSetting);
+        //----------------------------------------------------------------------
+
         // 取得 extention 全域變數
-        let $extension = _.$$extension;
+        const $extension = _.$$extension;
 
         // 每個有事件功能的物件都應該有個 event_id
         // 加快 obj_1 === obj_2 的步驟
@@ -66,8 +82,15 @@
             return res;
         })();
 
-        // 事件的藍圖
-        const Event = {};
+        // 是否有 jquery
+        let hasJquery = (function () {
+            let judge_1 = (global.jQuery != null || global.$ != null);
+
+            let judge_2 = (global.document != null);
+
+            return (judge_1 && judge_2);
+        })();
+
         //----------------------------------------------------------------------
         _.mixin({
             // API
@@ -76,21 +99,27 @@
             // 不然就直接覆蓋在物件身上
             // prefix: 避免撞名，在命令前加一個符號
             // obj 不能是 dom
-            event: EventSetting
+            event: EventCommand
         });
 
-        function EventSetting(obj, noProto, prefix) {
-            debugger;
-            let args = arguments;
+
+        function EventCommand(obj, noProto, prefix) {
+            // debugger;
+            let args = Array.from(arguments);
 
             if (args.length == 0) {
-                // 返回设定函式
-                return EventSetting;
+                // 返回设定物件
+                return eventSetting;
+            }
+
+            if (obj == null || typeof (obj) != "object") {
+                throw new TypeError("_.event() must be obj");
+            }
+
+            if ("__$$us_eventData" in obj) {
+                return obj;
             }
             //----------------------------
-            if ("__$$us_eventData" in obj) {
-                throw new TypeError("has been _.events()");
-            }
 
             noProto = (noProto == null) ? false : true;
             prefix = prefix ? prefix : false;
@@ -118,57 +147,103 @@
             }
             //------------------
             // 把所有資料都統一放在(__$$us_eventData)屬性
-            Tool.checkHasInitialized(assignObj);
+            Tool.checkInitialized(assignObj);
 
             return obj;
         }
         //----------------------------------------------------------------------
         (function (fn) {
-            // Regular expression used to split event strings.
-            fn.eventSplitter = /\s+/;
 
             fn.on = function (obj, name, callback, context) {
+                Tool.checkInitialized(obj);
+                __on.call(obj, name, callback, context);
+                return fn; 
             };
-
+            //------------------------------------------------------------------
             fn.once = function (obj, name, callback, context) {
-
+                Tool.checkInitialized(obj);
+                __on.call(obj, name, callback, context, true);
+                return fn; 
             };
-
+            //------------------------------------------------------------------
             fn.listenTo = function (obj, eventMaker, name, callback, context) {
+                
+                Tool.checkInitialized(obj);
+                Tool.checkInitialized(eventMaker);
 
+                __listenTo.call(obj, eventMaker, name, callback, context);
+                return fn; 
             };
-
+            //------------------------------------------------------------------
             fn.listenToOnce = function (obj, eventMaker, name, callback, context) {
+                
+                Tool.checkInitialized(obj);
+                Tool.checkInitialized(eventMaker);
 
+                __listenTo.call(obj, eventMaker, name, callback, context, true);
+                return fn;
             };
-
+            //------------------------------------------------------------------
             fn.hasOn = function (obj, name, callback) {
+                
+                if(!Tool.checkObj(obj)){
+                    return false;
+                }
 
+                return __hasOn.call(obj, name, callback);
             };
-
+            //------------------------------------------------------------------
             fn.hasListenTo = function (obj, eventMaker, name, callback) {
+                if(!Tool.checkObj(obj) || !Tool.checkObj(eventMaker)){
+                    return false;
+                }
+                
+                return __hasListenTo.call(obj, eventMaker, name, callback);
             };
-
+            //------------------------------------------------------------------
             fn.off = function (obj, name, callback) {
 
-            };
-
-            fn.clearListener = function (obj, eventMaker, name, callback) {
-
-            };
-
-            fn.stopListening = function (obj, eventMaker, name, callback) {
-            };
-
-            fn.trigger = function (obj, eventName) {
-                let args = arguments;
-                args = args.splice(1);
-
-                $_trigger.call(obj, eventName, args);
+                if(!Tool.checkObj(obj)){
+                    return fn;
+                }
+                __off.call(obj, name, callback);
 
                 return fn;
             };
+            //------------------------------------------------------------------
+            fn.clearListener = function (obj, eventMaker, name, callback) {
+                
+                if(!Tool.checkObj(obj) || !Tool.checkObj(eventMaker)){
+                    return fn;
+                }
+                
+                __clearListener.call(obj, eventMaker,name, callback);
 
+                return fn;
+            };
+            //------------------------------------------------------------------
+            fn.stopListening = function (obj, eventMaker, name, callback) {
+                
+                if(!Tool.checkObj(obj) || !Tool.checkObj(eventMaker)){
+                    return fn;
+                }
+                
+                __stopListening.call(obj, eventMaker,name, callback);
+
+                return fn;
+            };
+            //------------------------------------------------------------------
+            fn.trigger = function (obj, eventName) {
+                Tool.checkInitialized(obj);
+                
+                let args = Array.from(arguments);
+                args = args.splice(2);
+
+                __trigger.call(obj, eventName, args);
+
+                return fn;
+            };
+            //------------------------------------------------------------------
             fn.bind = fn.on;
 
             fn.unbind = fn.off;
@@ -176,153 +251,47 @@
             fn.emit = fn.trigger;
 
             fn.hasBind = fn.hasOn;
-        })(EventSetting);
+        })(EventCommand);
 
 
         //----------------------------------------------------------------------
         (function (_self) {
             _self.on = function (name, callback, context) {
                 'use strict';
-                return $_on.call(this, name, callback, context);
+                __on.call(this, name, callback, context);
+                return this;
             };
             //------------------------------------------------------------------
             _self.once = function (name, callback, context) {
                 'use strict';
-                return $_on.call(this, name, callback, context, true);
+                __on.call(this, name, callback, context, true);
+                return this;
             };
             //------------------------------------------------------------------
             _self.listenTo = function (obj, name, callback, context) {
                 'use strict';
-                return $_listenTo.call(this, obj, name, callback, context);
+                __listenTo.call(this, obj, name, callback, context);
+                return this;
             };
             //------------------------------------------------------------------
             _self.listenToOnce = function (obj, name, callback, context) {
                 'use strict';
-                return $_listenTo.call(this, obj, name, callback, context, true);
+                __listenTo.call(this, obj, name, callback, context, true);
+                return this;
             };
             //------------------------------------------------------------------
             // callback 是否被設定過
             _self.hasOn = function (name, callback) {
                 'use strict';
 
-                if (!name) {
-                    throw new TypeError("arg[0] must be evenName");
-                }
-
-                if (typeof (callback) !== "function") {
-                    throw new TypeError("arg[1] must be function");
-                }
-
-                let self_eventData = this["__$$us_eventData"];
-                let events = self_eventData.events;
-                let self_id = self_eventData.id;
-
-                if (events[name] == null) {
-                    return false;
-                }
-
-                if (callback["__$$us_eventGuid"] == null) {
-                    // 若 callback 沒設定過標記
-                    return false;
-                }
-
-                let eventList = events[name];
-
-                return eventList.some(function (handle) {
-                    // callback 是否匹配
-                    let judge_1 = (callback["__$$us_eventGuid"] === handle.callback["__$$us_eventGuid"]);
-
-                    // 監聽者是否匹配
-                    let judge_2 = (handle.listener["__$$us_eventData"]["id"] === self_id);
-
-                    return (judge_1 && judge_2);
-                });
+                return __hasOn.call(this, name, callback);
             };
             //------------------------------------------------------------------
             // 是否監聽過 obj
             // obj 為必須
             _self.hasListenTo = function (obj, name, callback) {
                 'use strict';
-                debugger;
-                let res = false;
-
-                if (obj == null || typeof obj !== "object") {
-                    throw new TypeError("arg[0] must be object");
-                }
-
-                if (obj["__$$us_eventData"] == null) {
-                    return res;
-                }
-
-                let self_eventData = this["__$$us_eventData"];
-                let self_id = self_eventData.id;
-
-                let obj_eventData = obj["__$$us_eventData"];
-                let obj_id = obj_eventData.id;
-                let events = obj_eventData.events;
-
-                //----------------------------
-                if (name == null && callback == null) {
-                    // 參數只有 obj
-                    // 只詢問是否有監聽過 obj
-                    res = (function () {
-
-                        if (self_eventData["listeningTo"] == null ||
-                            self_eventData["listeningTo"][obj_id] == null) {
-                            return false;
-                        }
-                        return true;
-                    }).call(this);
-
-                } else if (callback == null) {
-                    // 參數有 obj, eventName
-                    // 詢問是否監聽 obj 的某事件
-                    res = (function () {
-                        if (events[name] == null) {
-                            return res;
-                        }
-
-                        let eventList = events[name];
-
-                        return eventList.some(function (handle) {
-                            let judge_1 = (handle.listener["__$$us_eventData"]["id"] === self_id);
-
-                            return judge_1;
-                        });
-
-                    }).call(this);
-
-                } else {
-                    // 參數有 obj, eventName, callback
-                    res = (function () {
-
-                        if (typeof callback !== "function") {
-                            throw new TypeError("arg[2] must be function");
-                        }
-
-                        if (events[name] == null) {
-                            return false;
-                        }
-
-                        if (callback["__$$us_eventGuid"] == null) {
-                            // 若 callback 沒設定過標記
-                            return false;
-                        }
-
-                        let eventList = events[name];
-
-                        return eventList.some(function (handle) {
-                            let judge_1 = (callback["__$$us_eventGuid"] === handle.callback["__$$us_eventGuid"]);
-
-                            let judge_2 = (handle.listener["__$$us_eventData"]["id"] === self_id);
-
-                            return (judge_1 && judge_2);
-                        });
-                    }).call(this);
-
-                }
-                //----------------------------
-                return res;
+                return __hasListenTo.call(this, obj, name, callback);
             };
             //------------------------------------------------------------------
             // 只刪除自己註冊的事件
@@ -330,7 +299,7 @@
             _self.off = function (name, callback) {
                 'use strict';
 
-                $_off.call(this, name, callback);
+                __off.call(this, name, callback);
 
                 return this;
             };
@@ -342,7 +311,7 @@
             _self.clearListener = function (obj, name, callback) {
                 'use strict';
 
-                $_clearListener.call(this, obj, name, callback);
+                __clearListener.call(this, obj, name, callback);
 
                 return this;
             };
@@ -352,88 +321,7 @@
             _self.stopListening = function (obj, name, callback) {
                 'use strict';
 
-                debugger;
-
-                if (callback != null && typeof callback["__$$us_eventGuid"] === "undefined") {
-                    // callback 未註冊過
-                    return this;
-                }
-
-                let self_eventData = this["__$$us_eventData"];
-                let self_id = self_eventData.id;
-
-                if (obj === undefined) {
-                    // 移除與所有發射者間的關係
-                    // listenInfo 唯一的用處
-                    let listeningToList;
-                    if (listeningToList = self_eventData["listeningTo"]) {
-                        for (let key in listeningToList) {
-                            listenInfo = listeningToList[key];
-                            let target = listenInfo.listeningTo;
-                            this.stopListening(target);
-                        }
-                    }
-                    return this;
-                }
-                //----------------------------
-
-                Tool.checkHasInitialized(obj);
-
-                let target_eventData = obj["__$$us_eventData"];
-                let target_id = target_eventData.id;
-                let events = target_eventData.events;
-
-                let names = (name ? name.split(EventSetting.eventSplitter) : Object.keys(events));
-                //----------------------------
-                for (let j = 0, name; name = names[j]; j++) {
-
-                    let eventList = events[name];
-
-                    if (!Array.isArray(eventList)) {
-                        continue;
-                    }
-
-                    let remaining = [];
-
-                    // debugger;
-                    for (let i = 0; i < eventList.length; i++) {
-                        let handle = eventList[i];
-                        //----------------------------
-                        // 是否是正確的 callback
-                        let isCallback = (function () {
-                            if (callback == null) {
-                                return true;
-                            }
-                            return (handle.callback["__$$us_eventGuid"] === callback["__$$us_eventGuid"]);
-                        }());
-                        //----------------------------
-                        // 正確的傾聽者
-                        let isListener = (function () {
-                            let id = handle.listener["__$$us_eventData"]["id"];
-                            return (id == self_id);
-                        }());
-                        //----------------------------
-                        if (isCallback && isListener) {
-
-                            let listenInfo = handle.listenInfo;
-                            // handle match
-                            if (--listenInfo.count == 0) {
-                                // 刪除兩物件間的橋樑
-                                Tool.clearBridge(listenInfo);
-                            }
-                        } else {
-                            // handle 沒有 match
-                            remaining.push(handle);
-                        }
-                    }
-                    //----------------------------
-                    // debugger;
-                    if (remaining.length) {
-                        events[name] = remaining;
-                    } else {
-                        delete events[name];
-                    }
-                }
+                __stopListening.call(this, obj, name, callback);
 
                 return this;
             };
@@ -444,10 +332,10 @@
                 'use strict';
                 // debugger;
 
-                let args = arguments;
+                let args = Array.from(arguments);
                 args = args.splice(1);
 
-                $_trigger.call(this, eventName, args);
+                __trigger.call(this, eventName, args);
 
                 return this;
             };
@@ -462,14 +350,10 @@
         })(Event);
         //======================================================================
         // 設置本身的監聽
-        function $_on(name, callback, context, once) {
+        function __on(name, callback, context, once) {
             debugger;
             let self = this;
-
-            if (typeof (this["__$$us_eventData"]) === "undefined") {
-                // 若未經過 _.event() 初始化
-                throw new TypeError("obj must be _.event(obj)");
-            }
+            
             let eventData = this["__$$us_eventData"];
 
             let events = eventData.events;
@@ -480,7 +364,7 @@
             }
 
             //----------------------------
-            let names = name.split(EventSetting.eventSplitter);
+            let names = name.split(eventSetting.eventSplitter);
 
             for (let i = 0; i < names.length; i++) {
                 debugger;
@@ -489,7 +373,7 @@
                 if (events[name] == null) {
                     events[name] = [];
                     if (Tool.isDom(this)) {
-                        this.addEventListener(name, Tool.event_dispatcher);
+                        Tool.bindDomEvent(this, name, Tool.event_dispatcher);
                     }
                 }
                 let eventList = events[name];
@@ -511,10 +395,10 @@
         }
         //----------------------------------------------------------------------
         // 設置跨物件間的監聽
-        function $_listenTo(d, name, callback, context, once) {
+        function __listenTo(eventMaker, name, callback, context, once) {
             debugger;
 
-            Tool.checkHasInitialized(eventMaker);
+            Tool.checkInitialized(eventMaker);
 
             let target_eventData = eventMaker["__$$us_eventData"];
             let self_eventData = this["__$$us_eventData"];
@@ -532,7 +416,7 @@
 
             // 放置事件相關的資訊
             // 兩個物件彼此間的橋樑
-            let listenInfo = (function () {
+            let connectInfo = (function () {
                 debugger;
                 if (target_eventData["listeners"][self_eventData.id] != null) {
                     return target_eventData["listeners"][self_eventData.id];
@@ -543,20 +427,20 @@
                 }
             }());
 
-            if (listenInfo == null) {
+            if (connectInfo == null) {
                 // 兩個物件彼此間的橋樑資訊
-                listenInfo = {
+                connectInfo = {
                     listener: this,
                     listeningTo: eventMaker,
                     count: 1
                 };
             } else {
                 // 彼此之間有幾次連結關係
-                listenInfo.count++;
+                connectInfo.count++;
             }
 
             self_eventData["listeningTo"][target_eventData.id] =
-                target_eventData["listeners"][self_eventData.id] = listenInfo;
+                target_eventData["listeners"][self_eventData.id] = connectInfo;
             //----------------------------
             debugger;
             let events = target_eventData.events;
@@ -565,7 +449,7 @@
                 _.defineProperty(callback, "__$$us_eventGuid", $extension.callback_guid++, false);
             }
             //----------------------------
-            let names = name.split(EventSetting.eventSplitter);
+            let names = name.split(eventSetting.eventSplitter);
 
             for (let i = 0, name; name = names[i]; i++) {
                 debugger;
@@ -574,7 +458,7 @@
                     events[name] = [];
 
                     if (Tool.isDom(this)) {
-                        this.addEventListener(name, Tool.event_dispatcher);
+                        Tool.bindDomEvent(this, name, Tool.event_dispatcher);
                     }
                 }
                 let eventList = events[name];
@@ -590,22 +474,129 @@
                     listener: this,
                     listeningTo: eventMaker,
                     context: (context || this),
-                    listenInfo: listenInfo
+                    connectInfo: connectInfo
                 }));
             }
 
         }
         //----------------------------------------------------------------------
-        function $_hasOn(name, callback) {
+        function __hasOn(name, callback) {
+            if (!name) {
+                throw new TypeError("arg[0] must be evenName");
+            }
+            //-----------------------
+            let self_eventData = this["__$$us_eventData"];
+            let events = self_eventData.events;
+            let self_id = self_eventData.id;
 
+            if (events[name] == null) {
+                return false;
+            }else{
+                if(!callback){
+                    return true;
+                }
+            }
+            //-----------------------
+            if (callback["__$$us_eventGuid"] == null) {
+                // 若 callback 沒設定過標記
+                return false;
+            }
+
+            let eventList = events[name];
+
+            return eventList.some(function (handle) {
+                // callback 是否匹配
+                let judge_1 = (callback["__$$us_eventGuid"] === handle.callback["__$$us_eventGuid"]);
+
+                // 監聽者是否匹配
+                let judge_2 = (handle.listener["__$$us_eventData"]["id"] === self_id);
+
+                return (judge_1 && judge_2);
+            });
         }
+        //----------------------------------------------------------------------
 
+        function __hasListenTo(obj, name, callback) {
+            let res = false;
 
-        function $_hasListenTo(obj, name, callback) {
+            if (obj == null || typeof obj !== "object") {
+                throw new TypeError("arg[0] must be object");
+            }
 
+            if (obj["__$$us_eventData"] == null) {
+                return res;
+            }
+
+            let self_eventData = this["__$$us_eventData"];
+            let self_id = self_eventData.id;
+
+            let obj_eventData = obj["__$$us_eventData"];
+            let obj_id = obj_eventData.id;
+            let events = obj_eventData.events;
+
+            //----------------------------
+            if (name == null && callback == null) {
+                // 參數只有 obj
+                // 只詢問是否有監聽過 obj
+                res = (function () {
+
+                    if (self_eventData["listeningTo"] == null ||
+                        self_eventData["listeningTo"][obj_id] == null) {
+                        return false;
+                    }
+                    return true;
+                }).call(this);
+
+            } else if (callback == null) {
+                // 參數有 obj, eventName
+                // 詢問是否監聽 obj 的某事件
+                res = (function () {
+                    if (events[name] == null) {
+                        return false;
+                    }
+
+                    let eventList = events[name];
+
+                    return eventList.some(function (handle) {
+                        return (handle.listener["__$$us_eventData"]["id"] == self_id);
+                    });
+
+                }).call(this);
+
+            } else {
+                // 參數有 obj, eventName, callback
+                res = (function () {
+
+                    if (typeof callback !== "function") {
+                        throw new TypeError("callback must be function");
+                    }
+
+                    if (events[name] == null) {
+                        return false;
+                    }
+
+                    if (callback["__$$us_eventGuid"] == null) {
+                        // 若 callback 沒設定過標記
+                        return false;
+                    }
+
+                    let eventList = events[name];
+
+                    return eventList.some(function (handle) {
+                        let judge_1 = (callback["__$$us_eventGuid"] == handle.callback["__$$us_eventGuid"]);
+
+                        let judge_2 = (handle.listener["__$$us_eventData"]["id"] == self_id);
+
+                        return (judge_1 && judge_2);
+                    });
+                }).call(this);
+
+            }
+            //----------------------------
+            return res;
         }
-
-        function $_off(name, callback) {
+        //----------------------------------------------------------------------
+        function __off(name, callback) {
 
             if (callback != null && typeof callback["__$$us_eventGuid"] === "undefined") {
                 // callback 未註冊過
@@ -616,7 +607,7 @@
             let self_id = self_eventData.id;
             let events = self_eventData.events;
 
-            let names = (name ? name.split(EventSetting.eventSplitter) : Object.keys(events));
+            let names = (name ? name.split(eventSetting.eventSplitter) : Object.keys(events));
 
             for (let j = 0, name; name = names[j]; j++) {
 
@@ -652,16 +643,17 @@
                     events[name] = remaining;
                 } else {
                     delete events[name];
-                    if(Tool.isDom(this)){
+                    if (Tool.isDom(this)) {
                         // 移除事件转派者
-                        this.removeEventListener(name, Tool.event_dispatcher); 
+                        Tool.unBindDomEvent(this, name, Tool.event_dispatcher);
                     }
                 }
             }
         }
+        //----------------------------------------------------------------------
         // 问题点比较多的地方
         // 多看几次
-        function $_clearListener(obj, name, callback) {
+        function __clearListener(obj, name, callback) {
             if (callback != null && typeof callback["__$$us_eventGuid"] === "undefined") {
                 // callback 未註冊過
                 return this;
@@ -681,7 +673,7 @@
                 listener_id = listener_eventData["id"]
             }
             //----------------------------
-            let names = (name ? name.split(EventSetting.eventSplitter) : _.keys(events));
+            let names = (name ? name.split(eventSetting.eventSplitter) : _.keys(events));
             // 回圈所有種類的事件
             for (let j = 0, name; name = names[j]; j++) {
 
@@ -726,11 +718,11 @@
                     }
                     //----------------------------
                     if (isCallback && listener_match) {
-                        let listenInfo = handle.listenInfo;
+                        let connectInfo = handle.connectInfo;
                         // handle match
-                        if (--listenInfo.count == 0) {
+                        if (--connectInfo.count == 0) {
                             // 刪除兩物件間的橋樑
-                            Tool.clearBridge(listenInfo);
+                            Tool.clearBridge(connectInfo);
                         }
                     } else {
                         remaining.push(handle);
@@ -742,20 +734,99 @@
                     self_eventData.events[name] = remaining;
                 } else {
                     delete self_eventData.events[name];
-                    if(Tool.isDom(this)){
+                    if (Tool.isDom(this)) {
                         // 移除事件转派者
-                        this.removeEventListener(name, Tool.event_dispatcher);
+                        Tool.unBindDomEvent(this, name, Tool.event_dispatcher);
                     }
                 }
             }
         }
+        //----------------------------------------------------------------------
+        function __stopListening(obj, name, callback) {
+            if (callback != null && typeof callback["__$$us_eventGuid"] === "undefined") {
+                // callback 未註冊過
+                return this;
+            }
 
-        function $_stopListening(obj, name, callback) {
+            let self_eventData = this["__$$us_eventData"];
+            let self_id = self_eventData.id;
 
+            if (obj === undefined) {
+                // 移除與所有發射者間的關係
+                // connectInfo 唯一的用處
+                let listeningToList;
+                if (listeningToList = self_eventData["listeningTo"]) {
+                    for (let key in listeningToList) {
+                        connectInfo = listeningToList[key];
+                        let target = connectInfo.listeningTo;
+                        this.stopListening(target);
+                    }
+                }
+                return this;
+            }
+            //----------------------------
+
+            Tool.checkInitialized(obj);
+
+            let target_eventData = obj["__$$us_eventData"];
+            let target_id = target_eventData.id;
+            let events = target_eventData.events;
+
+            let names = (name ? name.split(eventSetting.eventSplitter) : Object.keys(events));
+            //----------------------------
+            for (let j = 0, name; name = names[j]; j++) {
+
+                let eventList = events[name];
+
+                if (!Array.isArray(eventList)) {
+                    continue;
+                }
+
+                let remaining = [];
+
+                // debugger;
+                for (let i = 0; i < eventList.length; i++) {
+                    let handle = eventList[i];
+                    //----------------------------
+                    // 是否是正確的 callback
+                    let isCallback = (function () {
+                        if (callback == null) {
+                            return true;
+                        }
+                        return (handle.callback["__$$us_eventGuid"] === callback["__$$us_eventGuid"]);
+                    }());
+                    //----------------------------
+                    // 正確的傾聽者
+                    let isListener = (function () {
+                        let id = handle.listener["__$$us_eventData"]["id"];
+                        return (id == self_id);
+                    }());
+                    //----------------------------
+                    if (isCallback && isListener) {
+
+                        let connectInfo = handle.connectInfo;
+                        // handle match
+                        if (--connectInfo.count == 0) {
+                            // 刪除兩物件間的橋樑
+                            Tool.clearBridge(connectInfo);
+                        }
+                    } else {
+                        // handle 沒有 match
+                        remaining.push(handle);
+                    }
+                }
+                //----------------------------
+                // debugger;
+                if (remaining.length) {
+                    events[name] = remaining;
+                } else {
+                    delete events[name];
+                }
+            }
         }
         //----------------------------------------------------------------------
-
-        function $_trigger(eventName, args) {
+        // args: 要發送的參數
+        function __trigger(eventName, args, domEvent) {
 
             if (Tool.isDom(this)) {
                 // 透过 dom 的发射性统
@@ -773,31 +844,47 @@
 
             if (!/^all$/i.test(eventName)) {
                 eventList = (Array.isArray(events[eventName]) ? events[eventName].slice() : undefined);
-                Too.triggerEvents(this, eventList, args, eventName, eventName);
+                Too.triggerEvents(this, eventList, args, eventName, eventName, domEvent);
             }
             //----------------------------
             if (all_eventList) {
-                Tool.triggerEvents(this, all_eventList, args, 'all', eventName);
+                Tool.triggerEvents(this, all_eventList, args, 'all', eventName, domEvent);
             }
         }
 
         //----------------------------------------------------------------------
         (function (_s) {
             // 檢查物件是否被 _.event() 初始化過
-            _s.checkHasInitialized = function (obj) {
+            _s.checkInitialized = function (obj) {
+
                 if (obj == null || typeof (obj) != "object") {
                     throw new TypeError("_.event() must be obj");
                 }
 
                 if (obj["__$$us_eventData"] == null) {
                     // 埋入一个资料
-                    _.defineProperty(assignObj, "__$$us_eventData", {
+
+                    _.defineProperty(obj, "__$$us_eventData", {
                         id: event_id++,
                         events: {},
                         listeners: null,
                         listeningTo: null
                     }, false);
                 }
+            };
+
+            // 物件是否具有 event 的能力
+            _s.checkObj = function(obj){
+                
+                if (obj == null || typeof (obj) != "object") {
+                    return false;
+                }
+
+                if(obj["__$$us_eventData"] == null){
+                    return false;
+                }
+
+                return true;
             };
             //------------------------------------------------------------------
             // obj 是否属于 dom
@@ -829,10 +916,10 @@
             };
             //------------------------------------------------------------------
             // 清除兩者間的關係紀錄
-            _s.clearBridge = function (listenInfo) {
+            _s.clearBridge = function (connectInfo) {
 
-                let listener = listenInfo.listener;
-                let listeningTo = listenInfo.listeningTo;
+                let listener = connectInfo.listener;
+                let listeningTo = connectInfo.listeningTo;
 
                 // 監聽者
                 let listener_eventData = listener["__$$us_eventData"];
@@ -863,7 +950,7 @@
             };
             //------------------------------------------------------------------
             // 發出訊息
-            _s.triggerEvents = function (target, eventList, args, name, triggerEvent) {
+            _s.triggerEvents = function (target, eventList, args, eventName, triggerEvent, domEvent) {
                 debugger;
 
                 let handle;
@@ -879,7 +966,7 @@
                     let _listener = handle.listener;
 
                     // 確保事件尚存
-                    let result = Tool.findHandle(target, name, handle);
+                    let result = Tool.findHandle(target, eventName, handle);
 
                     if (!result) {
                         continue;
@@ -889,10 +976,9 @@
                     // 在 _arg 塞入 event
 
                     // 事件本體
-                    let e = {
+                    let e = domEvent || {
                         target: target,
-                        type: name,
-                        triggerType: triggerEvent
+                        type: triggerEvent
                     };
 
                     _arg.unshift(e);
@@ -909,13 +995,22 @@
             // dom 用
             // 转发器
             _s.event_dispatcher = function (e) {
-                let target = e.target;
-                let eventName = e.type;
 
-                $_trigger.apply(target, [eventName, e.detail])
+                // 來自 $.jq.trigger() 的參數
+                let args = Array.from(arguments);
+                args = args.splice(1);
+
+                let eventName = e.type;
+                let _args = (e.detail == null ? [] : [e.detail]);
+                _args = _args.concat(args);
+
+                let self = e.currentTarget;
+
+                __trigger.call(self, eventName, _args, e);
+
             };
             //------------------------------------------------------------------
-
+            // _event.once()
             _s.getOnceEventCallback_1 = function (eventName, callback, context) {
                 function _callback() {
                     _.event.off(context, eventName, _callback);
@@ -926,6 +1021,7 @@
                 return _callback;
             };
             //------------------------------------------------------------------
+            // _event.listenToOnce()
             _s.getOnceEventCallback_2 = function (eventMaker, eventName, callback, context) {
                 function _callback() {
                     _.event.stopListening(context, eventMaker, eventName, _callback);
@@ -934,6 +1030,30 @@
                 _.defineProperty(_callback, "__$$us_eventGuid", callback["__$$us_eventGuid"], false);
 
                 return _callback;
+            };
+            //------------------------------------------------------------------
+            // 為 dom 綁定事件
+            _s.bindDomEvent = function (dom, name, callback) {
+                if (hasJquery) {
+                    // 用 jq 的方式綁定
+                    // jq.trigger 才有作用
+                    name = name + '.' + eventSetting.eventNamePrefix;
+
+                    $(dom).on(name, callback);
+                    return;
+                }
+                dom.addEventListener(name, _s.event_dispatcher);
+            };
+            //------------------------------------------------------------------
+            // 移除 dom 上绑定的事件
+            _s.unBindDomEvent = function (dom, name, callback) {
+                if (hasJquery) {
+                    name = name + '.' + eventSetting.eventNamePrefix;
+
+                    $(dom).off(name);
+                    return;
+                }
+                dom.removeEventListener(name, callback);
             };
 
         })(Tool);
@@ -952,7 +1072,7 @@
             this.context;
             // 若是物件間的監聽
             // 會有一個橋樑資訊
-            this.listenInfo;
+            this.connectInfo;
             /*--------------------------*/
             (function () {
                 options = options || {};
@@ -961,7 +1081,7 @@
                 options.listener && (this.listener = options.listener);
                 options.listeningTo && (this.listeningTo = options.listeningTo);
                 options.context && (this.context = options.context);
-                options.listenInfo && (this.listenInfo = options.listenInfo);
+                options.connectInfo && (this.connectInfo = options.connectInfo);
             }).call(this);
         }
 
