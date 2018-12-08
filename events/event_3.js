@@ -48,21 +48,21 @@
     // 建构工厂
     (function () {
 
-        if (typeof(window) == "object" && typeof(document) == "object") {
+        if (typeof (window) == "object" && typeof (document) == "object") {
             if (window._ == null) {
                 throw new TypeError("need import lodash or underscode");
             }
             $_ = window._;
             // 建構
             factory($_);
-        } else if (typeof(module) == 'object' && module.exports) {
+        } else if (typeof (module) == 'object' && module.exports) {
             // 指定 loadash|underscode 的 path
             module.exports = function (_) {
                 $_ = _;
                 // 建構
                 factory($_);
             };
-        } else if (typeof (window) === "undefined" && typeof(self) !== "undefined" && typeof (importScripts) === 'function') {
+        } else if (typeof (window) === "undefined" && typeof (self) !== "undefined" && typeof (importScripts) === 'function') {
             debugger;
             // webWorker 環境
             // console.log("worker")
