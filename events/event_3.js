@@ -1,28 +1,73 @@
 !(function (global) {
+    let $_;
+
+    const Tool = {};
+
+    // 事件的藍圖
+    const Event = {};
+
+    // 設定文件
+    const eventSetting = {};
 
     (function () {
-        let $_;
+        // Regular expression used to split event strings.
+        this.eventSplitter = /\s+/;
 
-        if (typeof window !== "undefined" && typeof document !== "undefined") {
-            if (typeof window._ === undefined) {
+        this.eventNamePrefix = 'usEvent';
+
+    }).call(eventSetting);
+    //----------------------------------------------------------------------
+
+    // 每個有事件功能的物件都應該有個 event_id
+    // 加快 obj_1 === obj_2 的步驟
+    let event_id = 1;
+
+    let supportProto = (function () {
+        let res = false;
+        try {
+            let test = {};
+            test.__proto__ = {};
+            res = true;
+            test = undefined;
+        } catch (e) {
+        }
+        return res;
+    })();
+
+    // 是否有 jquery
+    let hasJquery = (function () {
+        let judge_1 = (global.jQuery != null || global.$ != null);
+
+        let judge_2 = (global.document != null);
+
+        return (judge_1 && judge_2);
+    })();
+
+
+    //==========================================================================
+    // 建构工厂
+    (function () {
+
+        if (typeof(window) == "object" && typeof(document) == "object") {
+            if (window._ == null) {
                 throw new TypeError("need import lodash or underscode");
             }
             $_ = window._;
             // 建構
             factory($_);
-        } else if (typeof module !== 'undefined' && module.exports) {
+        } else if (typeof(module) == 'object' && module.exports) {
             // 指定 loadash|underscode 的 path
             module.exports = function (_) {
                 $_ = _;
                 // 建構
                 factory($_);
             };
-        } else if (typeof (window) === "undefined" && self !== "undefined" && typeof (importScripts) === 'function') {
+        } else if (typeof (window) === "undefined" && typeof(self) !== "undefined" && typeof (importScripts) === 'function') {
             debugger;
             // webWorker 環境
             // console.log("worker")
 
-            if (typeof (global._) === "undefined") {
+            if (global._ == null) {
                 // worker 本體初始建構
                 return;
             }
@@ -36,7 +81,9 @@
 
     }());
 
+
     //==========================================================================
+    // 工厂
     function factory(_) {
         ////////////////////////////////////////////////////////////////////////
         //
@@ -45,51 +92,9 @@
         // 把 dom 納入(將 dom 與 物件)可以做事件連結
         //
         ////////////////////////////////////////////////////////////////////////
-        const Tool = {};
-
-        // 事件的藍圖
-        const Event = {};
-
-        // 設定文件
-        const eventSetting = {};
-
-        (function () {
-            // Regular expression used to split event strings.
-            this.eventSplitter = /\s+/;
-
-            this.eventNamePrefix = 'usEvent';
-
-
-        }).call(eventSetting);
-        //----------------------------------------------------------------------
 
         // 取得 extention 全域變數
         const $extension = _.$$extension;
-
-        // 每個有事件功能的物件都應該有個 event_id
-        // 加快 obj_1 === obj_2 的步驟
-        let event_id = 1;
-
-        let supportProto = (function () {
-            let res = false;
-            try {
-                let test = {};
-                test.__proto__ = {};
-                res = true;
-                test = undefined;
-            } catch (e) {
-            }
-            return res;
-        })();
-
-        // 是否有 jquery
-        let hasJquery = (function () {
-            let judge_1 = (global.jQuery != null || global.$ != null);
-
-            let judge_2 = (global.document != null);
-
-            return (judge_1 && judge_2);
-        })();
 
         //----------------------------------------------------------------------
         _.mixin({
@@ -862,7 +867,7 @@
             }
             //----------------------------
             eventList = events['all'];
-            eventList = ((Array.isArray(eventList) && eventList.length > 0)? events['all'].slice() : undefined);
+            eventList = ((Array.isArray(eventList) && eventList.length > 0) ? events['all'].slice() : undefined);
 
             if (eventList) {
                 data.eventList = eventList;
@@ -1039,14 +1044,14 @@
                 let eventName = e.type;
 
 
-                if(e.detail != null){
-                    if(typeof(e.detail) == "object" && e.detail["$$us_eventData"] != null){
+                if (e.detail != null) {
+                    if (typeof (e.detail) == "object" && e.detail["$$us_eventData"] != null) {
                         args = e.detail["$$us_eventData"].concat(args);
-                    }else{
+                    } else {
                         args.unshift(e.detail);
                     }
                 }
-                
+
                 let self = e.currentTarget;
 
                 __trigger.call(self, eventName, args, e);
