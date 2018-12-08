@@ -455,8 +455,8 @@
                 if (events[name] == null) {
                     events[name] = [];
 
-                    if (Tool.isDom(this)) {
-                        Tool.bindDomEvent(this, name, Tool.event_dispatcher);
+                    if (Tool.isDom(eventMaker)) {
+                        Tool.bindDomEvent(eventMaker, name, Tool.event_dispatcher);
                     }
                 }
                 let eventList = events[name];
@@ -826,9 +826,12 @@
         }
         //----------------------------------------------------------------------
         // args: 要發送的參數
+        // domEvent 來自 dom 的事件，由 dom 发出事件
         function __trigger(eventName, args, domEvent) {
+            debugger;
 
-            if (Tool.isDom(this)) {
+            if (!domEvent && Tool.isDom(this)) {
+                // 若不是来自 dom 的事件，而是人为想发出事件
                 // 透过 dom 的发射性统
                 Tool.dom_triggerEvents(this, eventName, args);
                 return;
@@ -888,7 +891,7 @@
                     }, false);
                 }
             };
-
+            //------------------------------------------------------------------
             // 物件是否具有 event 的能力
             _s.checkObj = function (obj) {
 
@@ -963,11 +966,13 @@
             _s.dom_triggerEvents = function (dom, name, args) {
                 // 参数留意
                 let event = new CustomEvent(name, {
-                    detail: args,
+                    detail: {
+                        "$$us_eventData": args
+                    },
                     bubbles: true,
                     cancelable: true
                 });
-                dom.dispatch(event);
+                dom.dispatchEvent(event);
             };
             //------------------------------------------------------------------
             // 發出訊息
@@ -1025,18 +1030,26 @@
             // dom 用
             // 转发器
             _s.event_dispatcher = function (e) {
+                debugger;
 
                 // 來自 $.jq.trigger() 的參數
                 let args = Array.from(arguments);
                 args = args.splice(1);
 
                 let eventName = e.type;
-                let _args = (e.detail == null ? [] : [e.detail]);
-                _args = _args.concat(args);
 
+
+                if(e.detail != null){
+                    if(typeof(e.detail) == "object" && e.detail["$$us_eventData"] != null){
+                        args = e.detail["$$us_eventData"].concat(args);
+                    }else{
+                        args.unshift(e.detail);
+                    }
+                }
+                
                 let self = e.currentTarget;
 
-                __trigger.call(self, eventName, _args, e);
+                __trigger.call(self, eventName, args, e);
 
             };
             //------------------------------------------------------------------
