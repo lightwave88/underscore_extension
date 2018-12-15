@@ -1,49 +1,36 @@
 !(function (global) {
-    debugger;
 
-    // 试別是否被 extension 過
-    let $_; 
-    
     (function () {
 
-        if (typeof window !== "undefined" && typeof document !== "undefined") {
-                                   factory(window._);
-        } else if (typeof module !== 'undefined' && module.exports) {
+        if (typeof window != "undefined" && typeof document != "undefined") {
+            factory(window._, 'browser');
+        } else if (typeof module != 'undefined' && module.exports) {
             // 指定 loadash|underscode 的 path
             module.exports = function (obj) {
-                factory(obj);
+                factory(obj, 'nodejs');
             };
-        } else if (typeof (window) === "undefined" && self !== "undefined" && typeof (importScripts) === 'function') {
+        } else if (typeof (window) == "undefined" && self != "undefined" && typeof (importScripts) == 'function') {
             // debugger;
             // webWorker 環境
-            // console.log("worker")
 
-            if (typeof (global._) === "undefined") {
-                // worker 本體建構
-                return;
-            }
-            // 建構
-            factory(global._);
+            factory(global._, 'worker');
         } else {
-            throw new TypeError("not support your system");
+            factory(global._, 'other');
         }
     }());
     //==========================================================================
-    
-
     // 工廠函式
-    function factory(_) {
-        debugger;
+    function factory(_, environment) {
+        // debugger;
 
-        if($_ == null){
-            $_ = _;
-        }else{
+        if (typeof (_) != "object" && typeof (_) != "function") {
+            return;
+        }
+
+        if (_.$$extension != null) {
             return;
         }
         //----------------------------
-        if (_ == null || !_.isObject(_)) {
-            throw new TypeError("need import lodash or underscode");
-        }
         // extension的全域變數都放這(_.$$extension)
 
         Object.defineProperty(_, '$$extension', {
@@ -68,6 +55,10 @@
 
             // 預設使用線程數量
             _self.workerCount = 1;
+
+            _self._ = _;
+
+            _self.environment = environment;
 
         })(_.$$extension);
         //----------------------------
