@@ -1,47 +1,25 @@
 !(function (global) {
     // debugger;
-    let _;
+    
     (function () {
 
-        if (typeof window !== "undefined" && typeof document !== "undefined") {
-            if (typeof window._ === undefined) {
-                throw new TypeError("need import lodash or underscode");
-            }
-            _ = window._;
-
-            // 建構
-            factory(_);
-
-        } else if (typeof module !== 'undefined' && module.exports) {
+        if (typeof module !== 'undefined' && module.exports) {
             // 指定 loadash|underscode 的 path
-            module.exports = function (_path) {
-
-                if (typeof _path == "string") {
-                    _ = require(_path);
-                } else {
-                    _ = _path;
-                }
+            module.exports = function (obj) {                
                 // 建構
-                factory(_);
+                factory(obj);
             };
-        } else if (typeof (window) === "undefined" && self !== "undefined" && typeof (importScripts) === 'function') {
-            debugger;
-            // webWorker 環境
-            // console.log("worker")
-
+        } else {
             if (typeof (global._) === "undefined") {
                 // worker 本體建構
                 return;
             }
-            _ = global._;
-
             // 建構
             factory(_);
-        } else {
-            throw new TypeError("not support your system");
         }
-
     }());
+
+    return;
     //==========================================================================
     function factory(_) {
         if (typeof Promise !== 'function') {
