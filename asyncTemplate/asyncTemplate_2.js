@@ -91,9 +91,8 @@
         function asyncTemplateCommand(name, options) {
             let args = Array.from(arguments);
 
-            if (args.length == 0) {
-                // 返回设定
-                return _asyncTemplateSetting;
+            if (!name) {
+                return;
             }
             //----------------------------
             let instance;
@@ -117,11 +116,23 @@
         }
 
         (function(fn){
+            fn.keys = function(){
+
+            };
+
+            fn.values = function(){
+
+            };
+
             fn.delete = function(name){
 
             };
 
             fn.clear = function(){
+
+            };
+
+            fn.setting = function(){
 
             };
         })(asyncTemplateCommand);
@@ -262,11 +273,9 @@
                     }
                 }
                 //-----------------------
-
                 if (this.$$options.literals && !$isSupport_templateLiterals) {
                     this.$$options.literals = false;
                 }
-
             };
             //------------------------------------------------------------------
             this.promise = function () {
@@ -550,16 +559,8 @@
 
                 } else if (options.literals) {
                     // 采用 es6
-
-                    let content = "let _template_varName = '';\n\
-                    for (name in data) {\n\
-                        _template_varName += ( 'var ' + name + '=data[\"' + name + '\"];' );\n\
-                    }\n\
-                    eval(_template_varName);\n";
-
-                    content += "return (`" + this.$$htmlContent + "`);";
-
-                    this.$$templateFn = new Function("data", content);
+                    let content = this.$$htmlContent;
+                    this.$$templateFn = _.literals(content);
 
                 } else {
                     this.$$templateFn = _.template(this.$$htmlContent);
