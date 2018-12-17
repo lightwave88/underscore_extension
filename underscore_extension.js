@@ -85,7 +85,7 @@
         }());
         //======================================================================
 
-        if (typeof _.getScriptPath === 'undefined') {
+        if (_.getScriptPath == null) {
             _.mixin({
                 // worker 需要的功能
                 // 為手動取得(underscode|lodash)的位址
@@ -119,7 +119,7 @@
             });
         }
         //----------------------------
-        if (typeof _.defineProperty === 'undefined') {
+        if (_.defineProperty == null) {
             _.mixin({
                 // (Object.defineProperty)的封裝
                 defineProperty: function (obj, key, val, enumerable) {
@@ -133,7 +133,7 @@
             });
         }
         //----------------------------
-        if (typeof _.isPlainObject === 'undefined') {
+        if (_.isPlainObject == null) {
             _.mixin({
                 // 是否是 {}
                 // fix
@@ -158,20 +158,12 @@
                         return false;
                     }
 
-                    let keyList = Object.keys(obj);
-                    let ownerKeyList = Object.getOwnPropertyNames(obj);
-
-                    if (keyList.length != ownerKeyList.length) {
-                        return false;
-                    }
-
                     return true;
                 }
             });
         }
         //----------------------------
-        if (typeof _.getClass === 'undefined') {
-
+        if (_.getClass == null) {
             _.mixin({
                 // 比系統 typeof 能辨識更多 type
                 getClass: function (data) {
@@ -222,5 +214,31 @@
             });
         }
         //----------------------------
+        if (_.literals == null) {
+            // es6 模版
+            _.mixin({
+                literals: function (str) {                    
+                    str = str.replace(/^`/, '');
+                    str = str.replace(/`$/, '');
+
+                    str = str.replace(/`/g, '\\`');
+
+                    str = "`" + str + "`";
+                    //-----------------------
+
+                    let command = "let c = '';\n\
+                    for (let key in data) {\
+                        c += 'var ' + key + '= data[\"' + key + '\"]';\
+                    }\
+                    eval(c);\n\
+                    c=null;\n";
+
+                    command += 'return (' + str + ');';
+                    environment = new Function("data", command);
+
+                    return environment;
+                }
+            });
+        }
     };
 })(this || {});
