@@ -2,12 +2,11 @@
     // debugger;
 
     (function () {
-
         if (typeof module !== 'undefined' && module.exports) {
             // 指定 loadash|underscode 的 path
             module.exports = function (obj) {
                 // 建構
-                factory(obj);
+                factory_1(obj);
             };
         } else {
             if (typeof (global._) === "undefined") {
@@ -15,13 +14,13 @@
                 return;
             }
             // 建構
-            factory(global._);
+            factory_1(global._);
         }
     }());
 
     return;
     //==========================================================================
-    function factory(_) {
+    function factory_1(_) {
         if (typeof Promise !== 'function') {
             throw new Error('need Promise library');
         }
@@ -60,7 +59,7 @@
                     onRejected = onRejected.bind(context);
                 }
 
-                return this.then(onFulfilled, undefined);
+                return this.then(onFulfilled, null);
             };
         }
         //----------------------------------------------------------------------
@@ -78,7 +77,7 @@
                     onFulfilled = onFulfilled.bind(context);
                 }
 
-                return this.then(onFulfilled, undefined);
+                return this.then(onFulfilled, null);
             };
         }
         //----------------------------------------------------------------------
@@ -89,7 +88,7 @@
                     onRejected = onRejected.bind(context);
                 }
 
-                return this.then(undefined, onRejected);
+                return this.then(null, onRejected);
             };
         }
         //----------------------------------------------------------------------
@@ -150,10 +149,10 @@
                 let $this = this;
 
                 this._promise = new Promise(function (resolve, reject) {
-                    $this._setStatus(0);
                     $this._resolve = resolve;
                     $this._reject = reject;
                 });
+                this._setStatus(0);
 
                 this._promise.then(function (data) {
                     $this._setStatus(1);
@@ -191,7 +190,6 @@
             };
             //------------------------------------------------------------------
             this.thenWith = function (onFulfilled, onRejected, context) {
-
                 var def = Deferred();
                 var p = this.promise();
 
@@ -221,7 +219,6 @@
             };
             //------------------------------------------------------------------
             this.doneWith = function (onFulfilled, context) {
-
                 var def = Deferred();
                 var p = this.promise();
 
@@ -250,7 +247,6 @@
             };
             //------------------------------------------------------------------
             this.catchWith = function (onRejected, context) {
-
                 var def = Deferred();
                 var p = this.promise();
 
@@ -308,6 +304,10 @@
                 return (this._promise.__status == 2);
             };
             //------------------------------------------------------------------
+            this.status = function () {
+                return this._promise.__status;
+            };
+            //------------------------------------------------------------------         
             this._setStatus = function (status) {
                 if (this._promise.status == null) {
                     _.defineProperty(this._promise, '__status', status);
@@ -365,5 +365,43 @@
             }
 
         }).call(Deferred.prototype);
+    }
+    //==========================================================================
+    function factory_2(_) {
+        if (typeof _.deferred === 'undefined') {
+            _.mixin({
+                // 產生可以追蹤狀態的 promise
+                promise: function (callback, context) {
+                    let p;
+                    if (typeof callback == "boolean") {
+                        p = callback ? (Promise.resolve(context)) : (Promise.reject(context));
+                    } else if (callback instanceof Promise) {
+                        p = callback;
+                    } else if (typeof (callback) == "function") {
+                        callback = (context === undefined ? callback : callback.bind(this));
+
+                        p = new Promise(callback);
+                    } else if (Array.isArray(callback)) {
+                        callback = (context === undefined ? callback : callback.bind(this));
+
+                        p = Promise.all(callback);
+                    }
+
+                    if (p.__status == null) {
+                        _.defineProperty(this._promise, '__status', 0);
+                    }
+
+                    p.then(function () {
+                        p.__status = 1;
+                    }, function (err) {
+                        p.__status = 2;
+                        err = (err instanceof Error) ? err : new Error(err);
+                        throw err;
+                    });
+
+                    return p;
+                }
+            });
+        }
     }
 }(this || {}));
