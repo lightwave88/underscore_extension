@@ -45,43 +45,27 @@
 
 
     //==========================================================================
-    // 建构工厂
+
     (function () {
 
-        if (typeof (window) == "object" && typeof (document) == "object") {
-            if (window._ == null) {
-                throw new TypeError("need import lodash or underscode");
-            }
-            $_ = window._;
-            // 建構
-            factory($_);
-        } else if (typeof (module) == 'object' && module.exports) {
+        if (typeof module !== 'undefined' && module.exports) {
             // 指定 loadash|underscode 的 path
-            module.exports = function (_) {
-                $_ = _;
+            module.exports = function (obj) {
                 // 建構
-                factory($_);
+                factory(obj);
             };
-        } else if (typeof (window) === "undefined" && typeof (self) !== "undefined" && typeof (importScripts) === 'function') {
-            debugger;
-            // webWorker 環境
-            // console.log("worker")
-
-            if (global._ == null) {
-                // worker 本體初始建構
+        } else {
+            if (typeof (global._) === "undefined") {
+                // worker 本體建構
                 return;
             }
-            $_ = global._;
-
             // 建構
-            factory($_);
-        } else {
-            throw new TypeError("not support your system");
+            factory(global._);
         }
 
     }());
 
-
+    return;
     //==========================================================================
     // 工厂
     function factory(_) {
