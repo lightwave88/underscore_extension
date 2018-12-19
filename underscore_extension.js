@@ -226,12 +226,10 @@
                     str = "`" + str + "`";
                     //-----------------------
 
-                    let command = "let c = '';\n\
-                    for (let key in data) {\
-                        c += 'var ' + key + '= data[\"' + key + '\"]';\
-                    }\
-                    eval(c);\n\
-                    c=null;\n";
+                    let command = "for (let key in data) {\
+                        let script = 'var ' + key + '= data[\"' + key + '\"]';\
+                        eval(script)\
+                    }";
 
                     command += 'return (' + str + ');';
                     environment = new Function("data", command);
