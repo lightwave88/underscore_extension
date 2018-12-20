@@ -19,6 +19,25 @@
     }());
 
     return;
+
+    //==========================================================================
+    // 設置 def.status
+    function setStatusGet(obj){
+
+        let target = obj._promise;
+
+        Object.defineProperty(obj, 'status', {
+            enumerable: true,
+            configurable: true,
+            get:function(){
+                return target.__status;
+            },set:function(){
+                return;
+            }
+        });
+    }
+
+
     //==========================================================================
     function factory_1(_) {
         if (typeof Promise !== 'function') {
@@ -137,6 +156,7 @@
                 return new Deferred();
             }
             //----------------------------
+            this.fn = Deferred;
             this._reject;
             this._resolve;
             this._promise;
@@ -144,15 +164,18 @@
             this.__constructor();
         }
 
+
         (function () {
             this.__constructor = function () {
                 let $this = this;
-
+                
                 this._promise = new Promise(function (resolve, reject) {
                     $this._resolve = resolve;
                     $this._reject = reject;
                 });
                 this._setStatus(0);
+                
+                setStatusGet(this);
 
                 this._promise.then(function (data) {
                     $this._setStatus(1);
@@ -304,10 +327,6 @@
                 return (this._promise.__status == 2);
             };
             //------------------------------------------------------------------
-            this.status = function () {
-                return this._promise.__status;
-            };
-            //------------------------------------------------------------------         
             this._setStatus = function (status) {
                 if (this._promise.status == null) {
                     _.defineProperty(this._promise, '__status', status);
@@ -321,15 +340,11 @@
                     return null;
                 }
 
-                let fn = function (d) {
+                callback = (context === undefined ? callback : callback.bind(context));
+
+                return function (d) {
                     return callback(d);
                 };
-
-                if (context !== undefined) {
-                    fn = fn.bind(context);
-                }
-
-                return fn;
             };
             //------------------------------------------------------------------
             this._getErrorCallback = function (callback, context) {
@@ -337,15 +352,11 @@
                     return null;
                 }
 
-                let fn = function (err) {
+                callback = (context === undefined ? callback : callback.bind(context));
+
+                return function (err) {
                     return callback(err);
                 };
-
-                if (context !== undefined) {
-                    fn = fn.bind(context);
-                }
-
-                return fn;
             };
             //------------------------------------------------------------------
             this._getAlwaysCallback = function (callback, args, context) {
@@ -353,15 +364,11 @@
                     return null;
                 }
 
-                let fn = function (d) {
+                callback = (context === undefined ? callback : callback.bind(context));
+
+                return function (d) {
                     return callback(args, d);
                 };
-
-                if (context !== undefined) {
-                    fn = fn.bind(context);
-                }
-
-                return fn;
             }
 
         }).call(Deferred.prototype);
@@ -373,10 +380,8 @@
                 // 產生可以追蹤狀態的 promise
                 promise: function (callback, context) {
                     let p;
-                    if (typeof callback == "boolean") {
-                        p = callback ? (Promise.resolve(context)) : (Promise.reject(context));
-                    } else if (callback instanceof Promise) {
-                        p = callback;
+                    if (callback instanceof Promise) {
+                        p = Promise.resolve(callback);
                     } else if (typeof (callback) == "function") {
                         callback = (context === undefined ? callback : callback.bind(this));
 
@@ -385,8 +390,10 @@
                         callback = (context === undefined ? callback : callback.bind(this));
 
                         p = Promise.all(callback);
+                    } else {
+                        p = Promise.resolve(callback);
                     }
-
+                    //-----------------------
                     if (p.__status == null) {
                         _.defineProperty(this._promise, '__status', 0);
                     }
