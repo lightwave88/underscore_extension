@@ -38,11 +38,11 @@
                 noSupportFactory(obj);
             };
         } else {
-            if (global._ == null || _.$$extension == null) {
+            if (global._ == null || _.$extension == null) {
                 return;
             }
 
-            let environment = _.$$extension.environment;
+            let environment = _.$extension.environment;
 
             switch (environment) {
                 case 'browser':
@@ -96,7 +96,7 @@
             }
             //----------------------------
             let instance;
-            let templateItemMap = TemplateItem.$$templateItemMap;
+            let templateItemMap = TemplateItem.$templateItemMap;
             //----------------------------
             if (options == null) {
                 // 單純取出既有的 template
@@ -115,24 +115,24 @@
             return instance;
         }
 
-        (function(fn){
-            fn.keys = function(){
+        (function (fn) {
+            fn.keys = function () {
 
             };
 
-            fn.values = function(){
+            fn.values = function () {
 
             };
 
-            fn.delete = function(name){
+            fn.delete = function (name) {
 
             };
 
-            fn.clear = function(){
+            fn.clear = function () {
 
             };
 
-            fn.setting = function(){
+            fn.setting = function () {
 
             };
         })(asyncTemplateCommand);
@@ -143,47 +143,46 @@
         function TemplateItem(name, options) {
             'use strict';
 
-            this.$$style_id;
+            this.$style_id;
 
             // 使用者设定的模版名称
-            this.$$name;
+            this.$name;
 
-            this.$$content;
+            this.$content;
 
             // 原來的 html 內容
-            this.$$htmlContent;
+            this.$htmlContent;
 
             // 原来的 js 内容
-            this.$$javascriptContent;
+            this.$javascriptContent;
 
             // 原来的 css 内容
-            this.$$cssContent;
+            this.$cssContent;
 
             // 模版内容里的使用者設定
-            this.$$templateOptions = {
-                dataLoading: null,
-                dataLoaded: null,
-                dataUpdated: null,
-                templateLoading: null,
-                templateLoaded: null,
+            this.$templateOptions = {
+                dataloading: null,
+                dataloaded: null,
+                templateloading: null,
+                templateloaded: null,
                 mounted: null,
                 unmounted: null,
-                data: null
+                update: null,
+                data: {}
             };
 
-            // 是否已經載入
-            // 是否發生錯誤
-            this.$$status = {
-                loaded: false,
-                error: null
-            };
+            // templateItem 的狀態
+            // 0：初始化，1：執行完成，2：錯誤
+            this.$status = 0;
+
+            this.$error;
 
             // 針對 css 的垃圾回收
             // 當沒有 dom 引用此 template時
             // css 當移除
-            this.$$usedDom = new Map();
+            this.$usedDom = new Map();
 
-            this.$$options = {
+            this.$options = {
                 getData: null,
                 literals: true,
                 preload: true,
@@ -193,11 +192,11 @@
             };
 
             // 模版函式
-            this.$$templateFn;
+            this.$templateFn;
 
             // 代表的是
             // 取得資料然後解析這一段
-            this.$$deferred;
+            this.$deferred;
 
             //----------------------------
             this.__construct(name, options);
@@ -206,13 +205,13 @@
         // 类别
         (function (fn) {
             // 登陸所有的 TemplateItem
-            fn.$$templateItemMap = {};
+            fn.$templateItemMap = {};
 
-            fn.$$style_uid = 1;
+            fn.$style_uid = 1;
 
-            fn.$$command_head = "let templateOptions;";
+            fn.$command_head = "let templateOptions;";
 
-            fn.$$command_footer = "if(typeof(templateOptions) == 'object' && templateOptions != null){\
+            fn.$command_footer = "if(typeof(templateOptions) == 'object' && templateOptions != null){\
             return templateOptions;\
         }else{\
             return null;\
@@ -223,36 +222,32 @@
         (function () {
             this.__construct = function (name, options) {
 
-                this.$$name = name;
-                this.$$style_id = TemplateItem.$$style_uid++;
-                this.$$deferred = _.deferred();
+                this.$name = name;
+                this.$style_id = TemplateItem.$style_uid++;
+                this.$deferred = _.deferred();
 
                 this.set(options);
 
                 // 登陸
-                TemplateItem.$$templateItemMap[this.$$name] = this;
+                TemplateItem.$templateItemMap[this.$name] = this;
             };
             //------------------------------------------------
-            this.initialize = function(){
-                
+            this.initialize = function () {
+
                 // 根據 url 取得 this.content
-                if (this.$$options.preload) {
-                    this.$$asyncGetTemplate();
+                if (this.$options.preload) {
+                    this.$asyncGetTemplate();
                 }
             };
             //------------------------------------------------
             // 得知 loading 狀態
             // 拋出錯誤表示已經 loaded 但失敗
             this.loaded = function () {
-                let status = this.$$status;
-
-                return (status.loaded ? true : false);
+                return (this.$status > 0 ? true : false);
             };
             //------------------------------------------------
             this.error = function () {
-                let status = this.$$status;
-
-                return (status.error == null ? false : status.error);
+                return (this.$status == 2 ? this.$error : false);
             };
             //------------------------------------------------
             // 使用者设定
@@ -267,19 +262,19 @@
                     };
                 }
                 //-----------------------
-                for (let key in this.$$options) {
+                for (let key in this.$options) {
                     if (options[key] != null) {
-                        this.$$options[key] = options[key];
+                        this.$options[key] = options[key];
                     }
                 }
                 //-----------------------
-                if (this.$$options.literals && !$isSupport_templateLiterals) {
-                    this.$$options.literals = false;
+                if (this.$options.literals && !$isSupport_templateLiterals) {
+                    this.$options.literals = false;
                 }
             };
             //------------------------------------------------------------------
             this.promise = function () {
-                return this.$$deferred.promise();
+                return this.$deferred.promise();
             };
             //------------------------------------------------------------------
             // API
@@ -290,25 +285,27 @@
                 let $this = this;
 
                 let p;
-                if (!this.$$status.loaded && !this.$$options.preload) {
-                    $this.$$asyncGetTemplate();
+                if (!this.$status < 1 && !this.$options.preload) {
+                    $this.$asyncGetTemplate();
                 }
                 //-----------------------
-                p = this.$$deferred.promise();
+                p = this.$deferred.promise();
 
                 p.then(function () {
 
                     // 檢查 css 是否已登陸
-                    $this.$$insertStyle();
+                    $this.$insertStyle();
 
                     // 登陸 dom
-                    $this.$$usedDom.set(dom, true);
+                    $this.$usedDom.set(dom, true);
 
                     // 掛上 html
-                    $this.$$renderHtml(dom, data);
+                    $this.$renderHtml(dom, data);
 
                     // 執行 script
-                    $this.$$evalScript(dom, 'mounted');
+                    $this.$evalScript(dom, 'mounted');
+
+                    $this.$evalScript(dom, 'update');
                 });
 
                 return this;
@@ -319,18 +316,18 @@
             this.unmount = function (dom) {
                 debugger;
 
-                this.$$usedDom.delete(dom);
+                this.$usedDom.delete(dom);
 
                 // 執行 unbind script
-                this.$$evalScript(dom, 'unmounted');
+                this.$evalScript(dom, 'unmounted');
 
                 // 移除 html
-                this.$$removeHtmlContent(dom);
+                this.$removeHtmlContent(dom);
 
-                if (!this.$$usedDom.size) {
+                if (!this.$usedDom.size) {
                     // 若 template 都沒被引用
                     // 刪除 style
-                    this.$$removeStyle();
+                    this.$removeStyle();
                 }
 
                 return this;
@@ -340,26 +337,31 @@
             // 當使用者想對某個使用該模板的 dom 更新 data
             this.updateData = function (dom, data) {
                 // 掛上 html
-                // this.$$renderHtml(dom, data);
+                let _data = _.extend(this.$templateOptions.data, data);
 
-                this.$$evalScript(dom, 'dataUpdated');
+                // this.$renderHtml(dom, _data);
+
+                this.$evalScript(dom, 'update');
             };
             //------------------------------------------------
             // 給外面呼叫用
-            this.call_callback = function (dom, callbackName) {
-                this.$$evalScript(dom, callbackName);
+            this.add_hook = function (callback) {
+                
             };
             //------------------------------------------------
             // 取得模版函式
             this.getTemplate = function () {
-                return this.$$templateFn;
+                return this.$templateFn;
             };
-
+            //------------------------------------------------
+            this.getName = function () {
+                return this.$name;
+            };
             //------------------------------------------------
             // 插入 style
-            this.$$insertStyle = function () {
+            this.$insertStyle = function () {
                 // 先檢查 style 是否存在
-                let id = _asyncTemplateSetting["styleId_head"] + this.$$style_id;
+                let id = _asyncTemplateSetting["styleId_head"] + this.$style_id;
                 let styleDom = document.querySelector(("#" + id));
 
                 if (styleDom) {
@@ -367,14 +369,14 @@
                 }
                 styleDom = document.createElement('style');
                 styleDom.id = id;
-                styleDom.innerHTML = this.$$cssContent;
+                styleDom.innerHTML = this.$cssContent;
 
                 document.head.appendChild(styleDom);
             };
             //------------------------------------------------
             // 移除 style
-            this.$$removeStyle = function () {
-                let id = _asyncTemplateSetting["styleId_head"] + this.$$id;
+            this.$removeStyle = function () {
+                let id = _asyncTemplateSetting["styleId_head"] + this.$id;
                 let styleDom = document.querySelector(("#" + id));
 
                 if (styleDom) {
@@ -384,16 +386,16 @@
             //------------------------------------------------
 
             // 插入 html 內容
-            this.$$renderHtml = function (dom, data) {
+            this.$renderHtml = function (dom, data) {
                 debugger;
 
                 if (typeof (data) != "object" || data == null) {
                     data = {};
                 }
-                let htmlContent = this.$$htmlContent;
+                let htmlContent = this.$htmlContent;
 
                 try {
-                    htmlContent = this.$$templateFn(data);
+                    htmlContent = this.$templateFn(data);
                 } finally {
                     dom.innerHTML = htmlContent;
                 }
@@ -402,26 +404,26 @@
             //------------------------------------------------
 
             // 移除 html 內容
-            this.$$removeHtmlContent = function (dom) {
+            this.$removeHtmlContent = function (dom) {
                 dom.innerHTML = '';
             };
-            //------------------------------------------------
-            // 當 template 被移除時要執行的 script
-            this.$$evalScript = function (dom, callbackName) {
-                if (typeof (this.$$templateOptions[callbackName]) == "function") {
-                    let fn = this.$$templateOptions[callbackName];
-                    fn.call(this.$$templateOptions, dom);
+            //------------------------------------------------            
+            this.$evalScript = function (dom, callbackName) {
+
+                if (typeof (this.$templateOptions[callbackName]) == "function") {
+                    let fn = this.$templateOptions[callbackName];
+                    fn.call(this.$templateOptions, this.$error, dom);
                 }
             };
             //------------------------------------------------
             // 從 script 內容取得 templateOptions
-            this.$$importTemplateOptionsFromScript = function () {
+            this.$importTemplateOptionsFromScript = function () {
 
                 let res;
-                if (this.$$javascriptContent.trim().length > 0) {
+                if (this.$javascriptContent.trim().length > 0) {
 
-                    let command_body = this.$$javascriptContent;
-                    let command = TemplateItem.$$command_head + command_body + TemplateItem.$$command_footer;
+                    let command_body = this.$javascriptContent;
+                    let command = TemplateItem.$command_head + command_body + TemplateItem.$command_footer;
 
                     let fn;
                     try {
@@ -437,78 +439,78 @@
                     return;
                 }
 
-                for (let key in this.$$templateOptions) {
+                for (let key in this.$templateOptions) {
                     if (res[key] != null) {
-                        this.$$templateOptions[key] = res[key];
+                        this.$templateOptions[key] = res[key];
                     }
                 }
             };
             //------------------------------------------------
             // 取得 模版 的內容
             // 最主要非同步的步驟
-            this.$$asyncGetTemplate = function () {
+            this.$asyncGetTemplate = function () {
 
-                if (this.$$options["loading"] != null) {
-                    this.$$options["loading"](this);
+                if (this.$options["loading"] != null) {
+                    this.$options["loading"].call(this);
                 }
-
-                let $this = this;
+                //-----------------------
                 let p;
 
-                if (typeof (this.$$options.getData) == "function") {
-                    p = this.$$options.getData();
+                if (typeof (this.$options.getData) == "function") {
+                    p = this.$options.getData();
 
                     if (!(p instanceof Promise)) {
                         throw new TypeError('getData must return promise');
                     }
-                } else if (this.$$options.getData instanceof Promise) {
-                    p = this.$$options.getData;
+                } else if (this.$options.getData instanceof Promise) {
+                    p = this.$options.getData;
                 } else {
-                    throw new TypeError('getData must function or promise');
+                    p = this.$options.getData;
                 }
 
                 p = Promise.resolve(p);
                 //-----------------------
-                // 已取得資料
-                p.then(function (data) {
+                // 已取得資料                
+
+                p.thenWith(function (data) {
                     if (typeof (data) != "string") {
                         throw new TypeError("asyncTemplate data must be string");
                     }
-                    $this.$$content = data;
+                    this.$content = data;
 
-                    $this.$$status.loaded = true;
+                    this.$status = 1;
 
-                    $this.$$analyzeContent();
+                    this.$analyzeContent();
 
-                    $this.$$deferred.resolve($this);
-
-                    if ($this.$$options["loaded"] != null) {
-                        $this.$$options["loaded"]($this);
+                    if ($this.$options["loaded"] != null) {
+                        $this.$options["loaded"].call(this, null);
                     }
+
+                    this.$deferred.resolve($this);
                 }, function (err) {
-                    $this.$$status.loaded = true;
+                    this.$status = 2;
 
                     if (!(err instanceof Error)) {
                         err = new Error(err);
                     }
 
-                    $this.error = err;
+                    this.$error = err;
 
-                    if ($this.$$options["loaded"] != null) {
-                        $this.$$options["loaded"]($this);
+                    if (this.$options["loaded"] != null) {
+                        this.$options["loaded"].call(this, this.$error);
                     }
-                    $this.$$deferred.reject(err);
-                });
+                    $this.$deferred.reject(this.$error);
+                }, this);
 
                 return p;
             };
             //------------------------------------------------
             // 從 url 取得的內容解析
             // 取得 htmlContent, script, style
-            this.$$analyzeContent = function () {
+            this.$analyzeContent = function () {
                 debugger;
                 let parent = document.createElement('div');
-                parent.innerHTML = this.$$content;
+                parent.innerHTML = this.$content;
                 //-----------------------
 
                 let scriptList = Array.from(parent.querySelectorAll('script'));
@@ -519,7 +521,7 @@
                 // 移除所有的 script
                 scriptList.forEach(function (dom, i) {
                     if (!i) {
-                        this.$$javascriptContent = dom.innerHTML;
+                        this.$javascriptContent = dom.innerHTML;
                     }
                     dom.parentNode.removeChild(dom);
                 }, this);
@@ -527,7 +529,7 @@
                 // 移除所有的 style
                 styleList.forEach(function (dom, i) {
                     if (!i) {
-                        this.$$cssContent = dom.innerHTML;
+                        this.$cssContent = dom.innerHTML;
                     }
                     dom.parentNode.removeChild(dom);
                 }, this);
@@ -536,34 +538,34 @@
                 // this.domList = parent;
                 let templateDom = parent.querySelector('template');
 
-                this.$$htmlContent = (templateDom) ? templateDom.innerHTML : null;
+                this.$htmlContent = (templateDom) ? templateDom.innerHTML : null;
                 parent = undefined;
                 //-----------------------
                 // 匯入使用者设定
-                this.$$importTemplateOptionsFromScript();
+                this.$importTemplateOptionsFromScript();
 
                 // 确定著色引擎
-                this.$$setTemplateFn();
+                this.$setTemplateFn();
             };
             //------------------------------------------------
             // 产生 template 函式
-            this.$$setTemplateFn = function () {
-                let options = this.$$options;
+            this.$setTemplateFn = function () {
+                let options = this.$options;
 
                 if (options.render) {
                     // 若有指派著色引擎
 
-                    this.$$templateFn = (function (data) {
-                        this.$$options.render(this.$$htmlContent, data);
+                    this.$templateFn = (function (data) {
+                        this.$options.render(this.$htmlContent, data);
                     }).bind(this);
 
                 } else if (options.literals) {
                     // 采用 es6
-                    let content = this.$$htmlContent;
-                    this.$$templateFn = _.literals(content);
+                    let content = this.$htmlContent;
+                    this.$templateFn = _.literals(content);
 
                 } else {
-                    this.$$templateFn = _.template(this.$$htmlContent);
+                    this.$templateFn = _.template(this.$htmlContent);
                 }
             };
             //------------------------------------------------

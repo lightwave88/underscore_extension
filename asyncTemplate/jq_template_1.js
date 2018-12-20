@@ -27,6 +27,17 @@
             this.$data;
             this.$dom;
             this.$job;
+
+            // 使用者設定
+            this.$options = {
+                dataloading: null,
+                dataloaded: null,
+                templateloading: null,
+                templateloaded: null,
+                allloaded: null,                
+                update: null,
+                updated: null
+            }
             //-----------------------
             this.__construct(dom);
         }
@@ -38,6 +49,7 @@
             };
             //---------------------------------
             // 更新 template, data
+            // data (function|promise|data)
             this.update = function (tmplName, data) {
                 return this.$checkUpdate(tmplName, data);
             };
@@ -49,7 +61,7 @@
             //---------------------------------
             // 更新 data
             // data 可以是數據， promise, function
-            this.data = function (data) {
+            this.updateData = function (data) {
                 if (this.$template == null) {
                     throw new Error("u must assign template first");
                 }
@@ -63,6 +75,11 @@
                 // 對 _.observe() 暴露 this.data
 
             };
+            //---------------------------------
+            this.set = function (options) {
+
+            };
+            //---------------------------------
             // 若正在執行任務中
             // 終止既有的任務
             this.stop = function () {
@@ -80,6 +97,7 @@
                     return Promise.resolve();
                 }
 
+                // 開啟一個 job
                 return this.$startJob(tmplName, data);
             };
             //---------------------------------
@@ -113,81 +131,169 @@
             //---------------------------------
             this.$startJob = function (tmplName, data) {
                 // 創建一個 job
-                this.$job = new SwitchJob(this, tmplName, data, changeTemplate);
+                this.$job = new SwitchJob(this, tmplName, data);
                 return this.$job.update();
             };
 
         }).call(SwitchTemplate.prototype);
         //--------------------------------------
         // 任務
+        // 等待 template, data
+        // 是否要負責 render ??
         function SwitchJob(parent, template, data) {
-            this.$parent;
             this.$deferred;
-            this.$changeTemplate;
-            this.$loaded = false;
-            this.$template;
-
             //-----------------------
-            this.__construct(parent, template, data, changeTemplate);
+            this.$parent;
+            this.$changeTemplate;
+            this.$status = 0;
+            //-----------------------
+            this.$template;
+            this.$data;
+            this.$data_promise;
+            //-----------------------
+            this.$error;
+
+            // 開關
+            this.$stop = false;
+            //-----------------------
+            this.__construct(parent, template, data);
         }
 
         (function () {
             this.__construct = function (parent, template, data) {
                 this.$parent = parent;
+
                 this.$deferred = _.deferred();
+                
 
                 let prev_templName = this.$parent.$template.getName();
+
+                // 是否需要更換 template
+                // 還是只需要原 template.update()
                 this.$changeTemplate = (prev_templName.localeCompare(tmplName) == 0 ? false : true);
 
+
+                // 取得 template
                 this.$template = _.asyncTemplate(template);
+
+                this._aboutData(data);
             };
             //---------------------------------
             this.stop = function () {
-
+                this.$stop = true;
+                this.$deferred.reject();
             };
             //---------------------------------
+            // 更新
             this.update = function () {
-                let $this = this;
+                this._call_hook('update');
 
-                let p1 = this._getData();
+                // wait data
+                let p1 = this.$data_promise;
 
-                let p2 = this._getTemplate();
+                // wait template
+                let p2 = this.$template.promise();
 
-                Promise.all([p1, p2]).then(function () {
-                    $this.$loaded = true;
+                if (!this.$template.loaded()) {
+                    this._call_hook('templateloading');
 
-                    $this.upDateParent();
+                    p2.alwaysWith(function (err, data) {
+                        if(err){
+                            this.$error = (err instanceof Error)?err:new Error(err);
+                        }
+                        this._call_hook('templateloaded');
+                    }, this);
+                }
+                //-----------------------                
+                let p3 = Promise.all([p1, p2]);
 
-                    $this.$deferred.resolve();
-                }, function (err) {
-                    $this.$loaded = true;
-                    $this.$deferred.reject(err);
-                });
+                p3.alwaysWith(function (err, data) {
+                    this._allLoaded(err, data);
+                }, this);
 
                 return this.$deferred.promise();
             };
             //---------------------------------
-            // 更新 parent 數據
-            this.upDateParent = function () {
+            // template, data 都 load 完
+            this._allLoaded = function (err, data) {                
 
+                if(this.$stop){
+                    return;
+                }
+
+
+                if (err) {
+                    this.$status = 2;
+                    this.$error = (err instanceof Error)? err:new Error(err);
+                    this._call_hook('allloaded');
+                    this.$deferred.reject(err);
+
+                } else {
+
+                    let dom = this.$parent.$dom;
+
+                    this.$data = data[0] || undefined;
+
+                    this.$status = 1;
+                    this._call_hook('allloaded');
+                    
+                    if (this.$changeTemplate) {
+                        this.$parent.$template.unmount(dom, this.$data);
+                        this.$template.mount(dom, this.$data);                        
+                    } else {
+                        this.$template.updateData(dom, this.$data);
+                    }
+                    // 更新 parent 數據        
+                    this._upDateParent();
+
+                    this._call_hook('updated');
+
+                    this.$deferred.resolve();
+                }
+            };
+            //---------------------------------
+            // 更新 parent 數據
+            this._upDateParent = function () {
+                this.$parent.$data = this.$data;
+                this.$parent.$template = this.$template;
             };
             //---------------------------------
             this.loaded = function () {
                 return this.$loaded;
             };
             //---------------------------------
-            this._getData = function () {
+            // 資料的取得方式
+            this._aboutData = function (data) {
+                this._call_hook('dataloading');
 
+                if (data instanceof Promise) {
+                    this.$data_promise = data;
+                } else if (typeof (data) == "function") {
+                    this.$data_promise = data();
+                    if (!(this.$data_promise instanceof Promise)) {
+                        throw new TypeError('data must return promise')
+                    }
+                } else {
+                    this.$data_promise = Promise.resolve(data);
+                }
+                //-----------------------
+                this.$data_promise.alwaysWith(function (err, data) {
+                    // 執行 hook
+                    if(err){
+                        this.$error = (err instanceof Error?err:new Error(err));
+                    }
+                    this._call_hook('dataloaded');
+                    
+                }, this);
             };
             //---------------------------------
-            this._getTemplate = function () {
+            this._call_hook = function (hookName) {
+                let parentOptions = this.$parent.$options;
+               
+
             };
 
         }).call(SwitchJob.prototype);
-
-
-
-
     }
 
 })(this || {});
