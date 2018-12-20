@@ -7,6 +7,7 @@
             module.exports = function (obj) {
                 // 建構
                 factory_1(obj);
+                factory_2(obj);
             };
         } else {
             if (typeof (global._) === "undefined") {
@@ -15,6 +16,7 @@
             }
             // 建構
             factory_1(global._);
+            factory_2(global._);
         }
     }());
 
@@ -22,16 +24,16 @@
 
     //==========================================================================
     // 設置 def.status
-    function setStatusGet(obj){
+    function setStatusGet(obj) {
 
         let target = obj._promise;
 
         Object.defineProperty(obj, 'status', {
             enumerable: true,
             configurable: true,
-            get:function(){
+            get: function () {
                 return target.__status;
-            },set:function(){
+            }, set: function () {
                 return;
             }
         });
@@ -46,9 +48,7 @@
 
         if (typeof _.deferred === 'undefined') {
             _.mixin({
-                deferred: function () {
-                    return new Deferred();
-                }
+                deferred: Deferred
             });
         }
         //----------------------------------------------------------------------
@@ -168,13 +168,13 @@
         (function () {
             this.__constructor = function () {
                 let $this = this;
-                
+
                 this._promise = new Promise(function (resolve, reject) {
                     $this._resolve = resolve;
                     $this._reject = reject;
                 });
                 this._setStatus(0);
-                
+
                 setStatusGet(this);
 
                 this._promise.then(function (data) {
