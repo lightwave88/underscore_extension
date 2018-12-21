@@ -1,13 +1,10 @@
 !(function (global) {
     (function () {
         let $ = global.$ || global.jQuery || null;
-
         if ($) {
             factory($);
         }
-
     })();
-
     return;
     //--------------------------------------
     function factory($) {
@@ -21,10 +18,11 @@
             return $.data(dom, '__us_switchTemplate');
         }
         //--------------------------------------
-
         function SwitchTemplate(dom) {
             this.$template;
             this.$data;
+            this.$error;
+            //-----------------------
             this.$dom;
             this.$job;
 
@@ -34,14 +32,13 @@
                 dataloaded: null,
                 templateloading: null,
                 templateloaded: null,
-                allloaded: null,                
+                allloaded: null,
                 update: null,
                 updated: null
             }
             //-----------------------
             this.__construct(dom);
         }
-
 
         (function () {
             this.__construct = function (dom) {
@@ -76,6 +73,7 @@
 
             };
             //---------------------------------
+            // 關於設定
             this.set = function (options) {
 
             };
@@ -83,7 +81,10 @@
             // 若正在執行任務中
             // 終止既有的任務
             this.stop = function () {
-
+                if(!this.$job){
+                    return;
+                }
+                this.$job.stop();
             };
             //---------------------------------
             this.$checkUpdate = function (tmplName, data) {
@@ -116,31 +117,28 @@
                 return true;
             };
             //---------------------------------
-            // 最主要的目標
-            this.$render = function (changeTemplate) {
-
-                if (!changeTemplate) {
-                    // 既有的 template 的數據更新
-                    this.$template.updateData(this.$dom, this.$data);
-                } else {
-                    // template 需要更新
-                    this.$template.mount(this.$dom, this.$data)
-                }
-
-            };
-            //---------------------------------
             this.$startJob = function (tmplName, data) {
+                this.$error = null;                
+
                 // 創建一個 job
                 this.$job = new SwitchJob(this, tmplName, data);
-                return this.$job.update();
+                let p = this.$job.update();
+                
+                p.alwaysWith(function(err, data){
+                    this.$job == null;
+                },this);
+
+                return p;
             };
 
         }).call(SwitchTemplate.prototype);
-        //--------------------------------------
+        //======================================================================
         // 任務
         // 等待 template, data
         // 是否要負責 render ??
         function SwitchJob(parent, template, data) {
+            this.$dom;
+
             this.$deferred;
             //-----------------------
             this.$parent;
@@ -163,15 +161,15 @@
             this.__construct = function (parent, template, data) {
                 this.$parent = parent;
 
+                this.$dom = this.$parent.$dom;
+
                 this.$deferred = _.deferred();
-                
 
                 let prev_templName = this.$parent.$template.getName();
 
                 // 是否需要更換 template
                 // 還是只需要原 template.update()
                 this.$changeTemplate = (prev_templName.localeCompare(tmplName) == 0 ? false : true);
-
 
                 // 取得 template
                 this.$template = _.asyncTemplate(template);
@@ -204,7 +202,7 @@
                         this._call_hook('templateloaded');
                     }, this);
                 }
-                //-----------------------                
+                //-----------------------
                 let p3 = Promise.all([p1, p2]);
 
                 p3.alwaysWith(function (err, data) {
@@ -215,12 +213,11 @@
             };
             //---------------------------------
             // template, data 都 load 完
-            this._allLoaded = function (err, data) {                
+            this._allLoaded = function (err, data) {
 
                 if(this.$stop){
                     return;
                 }
-
 
                 if (err) {
                     this.$status = 2;
@@ -236,14 +233,14 @@
 
                     this.$status = 1;
                     this._call_hook('allloaded');
-                    
+
                     if (this.$changeTemplate) {
                         this.$parent.$template.unmount(dom, this.$data);
-                        this.$template.mount(dom, this.$data);                        
+                        this.$template.mount(dom, this.$data);
                     } else {
                         this.$template.updateData(dom, this.$data);
                     }
-                    // 更新 parent 數據        
+                    // 更新 parent 數據
                     this._upDateParent();
 
                     this._call_hook('updated');
@@ -256,6 +253,7 @@
             this._upDateParent = function () {
                 this.$parent.$data = this.$data;
                 this.$parent.$template = this.$template;
+                this.$parent.$error = this.$error;
             };
             //---------------------------------
             this.loaded = function () {
@@ -265,6 +263,7 @@
             // 資料的取得方式
             this._aboutData = function (data) {
                 this._call_hook('dataloading');
+                this._call_templateHook('dataloading');
 
                 if (data instanceof Promise) {
                     this.$data_promise = data;
@@ -283,14 +282,21 @@
                         this.$error = (err instanceof Error?err:new Error(err));
                     }
                     this._call_hook('dataloaded');
-                    
+                    this._call_templateHook('dataloaded');
+
                 }, this);
+            };
+            //---------------------------------
+            this._call_templateHook = function (hookName) {
+                this.$template.call_hook(this.$dom, hookName);
             };
             //---------------------------------
             this._call_hook = function (hookName) {
                 let parentOptions = this.$parent.$options;
-               
 
+                if(typeof(parentOptions[hookName] == 'function')){
+                    parentOptions[hookName].call(this.$dom, this.$error, this.$dom);
+                }
             };
 
         }).call(SwitchJob.prototype);

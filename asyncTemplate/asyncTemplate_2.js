@@ -47,7 +47,7 @@
             switch (environment) {
                 case 'browser':
                     let $ = global.$ || global.jQuery || null;
-                    jq_extension($);
+                    // jq_extension($);
 
                     factory(global._);
                     break;
@@ -58,7 +58,6 @@
         }
 
     }());
-
     return;
     //==========================================================================
     function noSupportFactory(_) {
@@ -73,12 +72,10 @@
         });
     }
     //==========================================================================
-
     function jq_extension($) {
 
     };
     //==========================================================================
-
     function factory(_) {
 
         _.mixin({
@@ -117,23 +114,28 @@
 
         (function (fn) {
             fn.keys = function () {
-
+                return Object.keys(TemplateItem.$templateItemMap);
             };
 
             fn.values = function () {
-
+                return Object.values(TemplateItem.$templateItemMap);
             };
 
             fn.delete = function (name) {
-
+                delete TemplateItem.$templateItemMap[name];
             };
 
             fn.clear = function () {
-
+                TemplateItem.$templateItemMap = {};
             };
 
-            fn.setting = function () {
-
+            fn.set = function (key, value) {
+                if(key == null){
+                    return _asyncTemplateSetting;
+                }else if(value == null){
+                    return _asyncTemplateSetting[key];
+                }
+                _asyncTemplateSetting = value;
             };
         })(asyncTemplateCommand);
         //--------------------------------------
@@ -161,10 +163,10 @@
 
             // 模版内容里的使用者設定
             this.$templateOptions = {
-                dataloading: null,
                 dataloaded: null,
                 templateloading: null,
                 templateloaded: null,
+                allloaded: null,
                 mounted: null,
                 unmounted: null,
                 update: null,
@@ -187,8 +189,8 @@
                 literals: true,
                 preload: true,
                 render: null,
-                loading: null,
-                loaded: null
+                templateloading: null,
+                templateloaded: null
             };
 
             // 模版函式
@@ -211,7 +213,7 @@
 
             fn.$command_head = "let templateOptions;";
 
-            fn.$command_footer = "if(typeof(templateOptions) == 'object' && templateOptions != null){\
+            fn.$command_footer = "if(templateOptions != null && typeof(templateOptions) == 'object'){\
             return templateOptions;\
         }else{\
             return null;\
@@ -291,22 +293,22 @@
                 //-----------------------
                 p = this.$deferred.promise();
 
-                p.then(function () {
+                p.thenWith(function () {
 
                     // 檢查 css 是否已登陸
-                    $this.$insertStyle();
+                    this.$insertStyle();
 
                     // 登陸 dom
-                    $this.$usedDom.set(dom, true);
+                    this.$usedDom.set(dom, true);
 
                     // 掛上 html
-                    $this.$renderHtml(dom, data);
+                    this.$renderHtml(dom, data);
 
                     // 執行 script
-                    $this.$evalScript(dom, 'mounted');
+                    this.$call_hook(dom, 'mounted');
 
-                    $this.$evalScript(dom, 'update');
-                });
+                    this.$call_hook(dom, 'update');
+                }, this);
 
                 return this;
             };
@@ -319,7 +321,7 @@
                 this.$usedDom.delete(dom);
 
                 // 執行 unbind script
-                this.$evalScript(dom, 'unmounted');
+                this.$call_hook(dom, 'unmounted');
 
                 // 移除 html
                 this.$removeHtmlContent(dom);
@@ -332,21 +334,19 @@
 
                 return this;
             };
-
             //------------------------------------------------
             // 當使用者想對某個使用該模板的 dom 更新 data
             this.updateData = function (dom, data) {
                 // 掛上 html
-                let _data = _.extend(this.$templateOptions.data, data);
+                
+                this.$renderHtml(dom, data);
 
-                // this.$renderHtml(dom, _data);
-
-                this.$evalScript(dom, 'update');
+                this.$call_hook(dom, 'updated');
             };
             //------------------------------------------------
             // 給外面呼叫用
-            this.add_hook = function (callback) {
-                
+            this.call_hook = function (dom, callbackName) {
+                this.$call_hook(dom, callbackName);
             };
             //------------------------------------------------
             // 取得模版函式
@@ -392,6 +392,8 @@
                 if (typeof (data) != "object" || data == null) {
                     data = {};
                 }
+
+                data = _.extend(this.$templateOptions.data, data);
                 let htmlContent = this.$htmlContent;
 
                 try {
@@ -408,12 +410,20 @@
                 dom.innerHTML = '';
             };
             //------------------------------------------------            
-            this.$evalScript = function (dom, callbackName) {
+            this.$call_hook = function (dom, callbackName) {
 
-                if (typeof (this.$templateOptions[callbackName]) == "function") {
-                    let fn = this.$templateOptions[callbackName];
-                    fn.call(this.$templateOptions, this.$error, dom);
+
+                if(typeof(this.$options[callbackName])== "function"){
+                    this.$options[callbackName].call(this, this.$error, dom);
                 }
+
+                if(this.$status > 0){
+                    if (typeof (this.$templateOptions[callbackName]) == "function") {
+                        let fn = this.$templateOptions[callbackName];
+                        fn.call(this.$templateOptions, this.$error, dom);
+                    }
+                }
+
             };
             //------------------------------------------------
             // 從 script 內容取得 templateOptions
@@ -450,8 +460,8 @@
             // 最主要非同步的步驟
             this.$asyncGetTemplate = function () {
 
-                if (this.$options["loading"] != null) {
-                    this.$options["loading"].call(this);
+                if (this.$options["templateloading"] != null) {
+                    this.$options["templateloading"].call(this);
                 }
                 //-----------------------
                 let p;
@@ -482,8 +492,8 @@
 
                     this.$analyzeContent();
 
-                    if ($this.$options["loaded"] != null) {
-                        $this.$options["loaded"].call(this, null);
+                    if ($this.$options["templateloaded"] != null) {
+                        $this.$options["templateloaded"].call(this, null);
                     }
 
                     this.$deferred.resolve($this);
@@ -496,8 +506,8 @@
 
                     this.$error = err;
 
-                    if (this.$options["loaded"] != null) {
-                        this.$options["loaded"].call(this, this.$error);
+                    if (this.$options["templateloaded"] != null) {
+                        this.$options["templateloaded"].call(this, this.$error);
                     }
                     $this.$deferred.reject(this.$error);
                 }, this);
@@ -572,8 +582,5 @@
 
         }).call(TemplateItem.prototype);
     } // end factory
-
-
-
 
 }(this || {}));
