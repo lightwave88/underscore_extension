@@ -1,4 +1,5 @@
 !(function (global) {
+
     ////////////////////////////////////////////////////////////////////////////
     //
     //
@@ -38,11 +39,11 @@
                 noSupportFactory(obj);
             };
         } else {
-            if (global._ == null || _.$extension == null) {
+            if (global._ == null || _.$$extension == null) {
                 return;
             }
 
-            let environment = _.$extension.environment;
+            let environment = _.$$extension.environment;
 
             switch (environment) {
                 case 'browser':
@@ -66,7 +67,7 @@
         }
 
         _.mixin({
-            asyncTemplateCommand: function () {
+            asyncTemplate: function () {
                 throw new Error("this. enviroment no support _.async()");
             }
         });
@@ -101,7 +102,7 @@
             } else {
 
                 if (templateItemMap[name] != null) {
-                    throw new Error("template(" + name + ") has exists");
+                    return templateItemMap[name];
                 }
 
                 // 新增一個 template
@@ -162,14 +163,16 @@
             this.$cssContent;
 
             // 模版内容里的使用者設定
-            this.$templateOptions = {
+            this.$templateOptions = {};
+
+            this.$_templateOptions = {
+                dataloading: null,
                 dataloaded: null,
-                templateloading: null,
                 templateloaded: null,
                 allloaded: null,
                 mounted: null,
                 unmounted: null,
-                update: null,
+                updated: null,
                 data: {}
             };
 
@@ -284,16 +287,15 @@
             this.mount = function (dom, data) {
                 debugger;
 
-                let $this = this;
-
                 let p;
                 if (!this.$status < 1 && !this.$options.preload) {
-                    $this.$asyncGetTemplate();
+                    this.$asyncGetTemplate();
                 }
                 //-----------------------
                 p = this.$deferred.promise();
 
-                p.thenWith(function () {
+                p.doneWith(function () {
+                    debugger;
 
                     // 檢查 css 是否已登陸
                     this.$insertStyle();
@@ -307,7 +309,8 @@
                     // 執行 script
                     this.$call_hook(dom, 'mounted');
 
-                    this.$call_hook(dom, 'update');
+                    debugger;
+                    this.$call_hook(dom, 'updated');
                 }, this);
 
                 return this;
@@ -338,7 +341,7 @@
             // 當使用者想對某個使用該模板的 dom 更新 data
             this.updateData = function (dom, data) {
                 // 掛上 html
-                
+
                 this.$renderHtml(dom, data);
 
                 this.$call_hook(dom, 'updated');
@@ -409,7 +412,7 @@
             this.$removeHtmlContent = function (dom) {
                 dom.innerHTML = '';
             };
-            //------------------------------------------------            
+            //------------------------------------------------
             this.$call_hook = function (dom, callbackName) {
 
 
@@ -449,11 +452,14 @@
                     return;
                 }
 
-                for (let key in this.$templateOptions) {
-                    if (res[key] != null) {
-                        this.$templateOptions[key] = res[key];
+                this.$templateOptions = res;
+
+                for (let key in this.$_templateOptions) {
+                    if (this.$templateOptions[key] == null) {
+                        this.$templateOptions[key] = this.$_templateOptions[key];
                     }
                 }
+                res = null;
             };
             //------------------------------------------------
             // 取得 模版 的內容
@@ -480,7 +486,7 @@
 
                 p = Promise.resolve(p);
                 //-----------------------
-                // 已取得資料                
+                // 已取得資料
 
                 p.thenWith(function (data) {
                     if (typeof (data) != "string") {
@@ -492,11 +498,11 @@
 
                     this.$analyzeContent();
 
-                    if ($this.$options["templateloaded"] != null) {
-                        $this.$options["templateloaded"].call(this, null);
+                    if (this.$options["templateloaded"] != null) {
+                        this.$options["templateloaded"].call(this, null);
                     }
 
-                    this.$deferred.resolve($this);
+                    this.$deferred.resolve(this);
                 }, function (err) {
                     this.$status = 2;
 
@@ -509,7 +515,7 @@
                     if (this.$options["templateloaded"] != null) {
                         this.$options["templateloaded"].call(this, this.$error);
                     }
-                    $this.$deferred.reject(this.$error);
+                    this.$deferred.reject(this.$error);
                 }, this);
 
                 return p;
@@ -518,7 +524,7 @@
             // 從 url 取得的內容解析
             // 取得 htmlContent, script, style
             this.$analyzeContent = function () {
-                debugger;
+                // debugger;
                 let parent = document.createElement('div');
                 parent.innerHTML = this.$content;
                 //-----------------------
@@ -526,7 +532,7 @@
                 let scriptList = Array.from(parent.querySelectorAll('script'));
                 let styleList = Array.from(parent.querySelectorAll('style'));
                 //-----------------------
-                debugger;
+                // debugger;
 
                 // 移除所有的 script
                 scriptList.forEach(function (dom, i) {
@@ -544,7 +550,7 @@
                     dom.parentNode.removeChild(dom);
                 }, this);
                 //-----------------------
-                debugger;
+                // debugger;
                 // this.domList = parent;
                 let templateDom = parent.querySelector('template');
 

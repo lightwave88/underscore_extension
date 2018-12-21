@@ -8,14 +8,30 @@
     return;
     //--------------------------------------
     function factory($) {
-        $.template = switchTemplateCommand;
+        $.component = switchTemplateCommand;
 
-        function switchTemplateCommand(dom) {
+        function switchTemplateCommand(dom, options) {
+            let switchTemplate;
+
+            if(typeof(dom)=="string"){
+                dom = document.querySelector(dom);
+            }
+
+            if(!(dom instanceof EventTarget)){
+                throw new TypeError('dom typeError');
+            }
+
             if ($.data(dom, '__us_switchTemplate') == null) {
-                let switchTemplate = new SwitchTemplate(dom);
+                switchTemplate = new SwitchTemplate(dom);
                 $.data(dom, '__us_switchTemplate', switchTemplate);
             }
-            return $.data(dom, '__us_switchTemplate');
+            switchTemplate = $.data(dom, '__us_switchTemplate');
+
+            if($.isPlainObject(options)){
+                switchTemplate.set(options);
+            }
+
+            return switchTemplate;
         }
         //--------------------------------------
         function SwitchTemplate(dom) {
@@ -74,7 +90,21 @@
             };
             //---------------------------------
             // 關於設定
-            this.set = function (options) {
+            this.set = function (key, value) {
+                let setting = {};
+
+                if($.isPlainObject(key)){
+                    setting = key;
+                }else{
+                    setting[key] = value;
+                }
+
+                for (let k in this.$options) {
+                    if(setting[k] == null){
+                        continue;
+                    }
+                    this.$options[k] = setting[k];
+                }
 
             };
             //---------------------------------
@@ -88,10 +118,16 @@
             };
             //---------------------------------
             this.$checkUpdate = function (tmplName, data) {
+                debugger;
+
                 data = data || {};
 
                 if (!tmplName) {
                     throw new TypeError('tmplName typeError');
+                }
+
+                if(!_.asyncTemplate(tmplName)){
+                    throw new Error('template('+tmplName+') no exists');
                 }
 
                 if (!this.$check_1(tmplName, data)) {
@@ -118,12 +154,12 @@
             };
             //---------------------------------
             this.$startJob = function (tmplName, data) {
-                this.$error = null;                
+                this.$error = null;
 
                 // 創建一個 job
                 this.$job = new SwitchJob(this, tmplName, data);
                 let p = this.$job.update();
-                
+
                 p.alwaysWith(function(err, data){
                     this.$job == null;
                 },this);
@@ -165,14 +201,22 @@
 
                 this.$deferred = _.deferred();
 
-                let prev_templName = this.$parent.$template.getName();
+                let prev_templName = '';
+
+                if(this.$parent.$template){
+                    prev_templName = this.$parent.$template.getName();
+                }
 
                 // 是否需要更換 template
                 // 還是只需要原 template.update()
-                this.$changeTemplate = (prev_templName.localeCompare(tmplName) == 0 ? false : true);
+                this.$changeTemplate = (prev_templName.localeCompare(template) == 0 ? false : true);
 
                 // 取得 template
                 this.$template = _.asyncTemplate(template);
+
+                if(!this.$template){
+                    throw new Error('template('+template+') no exists');
+                }
 
                 this._aboutData(data);
             };
@@ -222,7 +266,10 @@
                 if (err) {
                     this.$status = 2;
                     this.$error = (err instanceof Error)? err:new Error(err);
+
                     this._call_hook('allloaded');
+                    this._call_templateHook('allloaded');
+
                     this.$deferred.reject(err);
 
                 } else {
@@ -232,10 +279,16 @@
                     this.$data = data[0] || undefined;
 
                     this.$status = 1;
+
                     this._call_hook('allloaded');
+                    this._call_templateHook('allloaded');
 
                     if (this.$changeTemplate) {
-                        this.$parent.$template.unmount(dom, this.$data);
+
+                        if(this.$parent.$template){
+                            this.$parent.$template.unmount(dom, this.$data);
+                        }
+
                         this.$template.mount(dom, this.$data);
                     } else {
                         this.$template.updateData(dom, this.$data);
@@ -294,7 +347,7 @@
             this._call_hook = function (hookName) {
                 let parentOptions = this.$parent.$options;
 
-                if(typeof(parentOptions[hookName] == 'function')){
+                if(typeof(parentOptions[hookName]) == 'function'){
                     parentOptions[hookName].call(this.$dom, this.$error, this.$dom);
                 }
             };
