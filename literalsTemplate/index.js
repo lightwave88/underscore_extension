@@ -1,0 +1,1 @@
+module.exports = require('./literalsTemplate_1.js')
