@@ -1,6 +1,6 @@
 !(function (global) {
     (function () {
-        debugger;
+        // debugger;
 
         if (typeof (module) == 'object' && module.exports) {
             // 指定 loadash|underscode 的 path
@@ -31,7 +31,7 @@
     ////////////////////////////////////////////////////////////
 
     function factory(_) {
-        debugger;
+        // debugger;
         let _templateSetting = _.templateSetting || templateSetting;
 
         _.mixin({
@@ -48,42 +48,35 @@
             let evaluate = _templateSetting.evaluate;
             let interpolate = _templateSetting.interpolate;
             let escape = _templateSetting.escape;
-
-            let reg = [];
-            reg.push(evaluate.source);
-            reg.push(interpolate.source);
-            reg.push(escape.source);
-            reg = reg.join("|");
-            reg = `([\\s\\S]*?)(?:${reg})`;
+            
+            reg = `(?:${evaluate.source})|(?:${interpolate.source})|(?:${escape.source})|(?:$)`;
             console.log(reg);
             reg = RegExp(reg, 'g');
 
             let source = "let source = [];\n";
-            template = template.replace(reg, function (m, g1, g2, g3, g4) {
+
+            let index = 0;
+            template = template.replace(reg, function (m, g1, g2, g3, offset) {
                 debugger;
-                if (g1) {
-                    source += `source.push(\`${g1}\`);\n`;
+                let str = template.slice(index, offset);
+                index = offset + m.length;
+
+                if (str.length) {
+                    source += `source.push(\`${str}\`);\n`;
                 }
 
-                if (g2) {
-                    // <% %>
-                    // g2 = g2.replace(/%>$/, '').replace(/^<%/, '');
-                    source += `\n${g2}\n`;
-                } else if (g3) {
+                if (g1) {
+                    // <% %>                    
+                    source += `\n${g1}\n`;
+                } else if (g2) {
                     // <%= %>
-                    // g3 = g3.replace(/%>$/, '').replace(/^<%=/, '');
-                    source += `source.push(print(${g3}));\n`;
-                } else if (g4) {
+                    source += `source.push(print(${g2}));\n`;
+                } else if (g3) {
                     // <%- %>
-                    // g4 = g4.replace(/%>$/, '').replace(/^<%-/, '');
-                    source += `source.push(print(${g4}));\n`;
+                    source += `source.push(print(${g3}));\n`;
                 }
                 return '';
             });
-
-            if (template) {
-                source += `source.push(\`${template}\`);\n`;
-            }
 
             source += 'return (source.join(""));\n';
 
