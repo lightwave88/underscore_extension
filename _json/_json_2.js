@@ -51,11 +51,24 @@
                 return /RegExp/i.test(className);
             }
             //----------------------------
+            debugger;
             let source = targetObj.source;
-            let options = source.replace(/\/.*\//, '');
+            let options = targetObj.toString().replace(/\/.*\//, '');
+
+            let optionList = [];
+            for (let i = 0; i < options.length; i++) {
+                optionList.push(`"${options.charAt(i)}"`);
+            }
 
             // debugger;
-            let evalString = `RegExp("${source}")`;
+            let evalString;
+            source = source.replace(/\\/, "\\\\");
+            if(optionList.length){
+                let option = optionList.join(",")
+                evalString = `(new RegExp("${source}",${option}))`;
+            }else{
+                evalString = `(new RegExp("${source}"))`;
+            }
             //----------------------------
             let job_id = obj.getJobUID();
             let code = obj.fn.getCode(job_id);
@@ -86,7 +99,7 @@
             } else {
                 res = '';
             }
-            let evalString = "new Map([" + res + "])";
+            let evalString = "(new Map([" + res + "]))";
             //----------------------------
             let job_id = obj.getJobUID();
             let code = obj.fn.getCode(job_id);
