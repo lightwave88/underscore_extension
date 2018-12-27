@@ -19,26 +19,55 @@
     //==========================================================================
     function factory(_) {
         _.mixin({
-            stringify: stringify,
-            parse: function () {
-
-            }
+            jsonStringify: stringify,
+            jsonParse: parse
         });
     }
+
+    // safety: 是否採用安全預設的方式轉換(但有些數據格式無法轉換)
+    // obj: 不需設定，系統內部使用 
+    function stringify(data, safety, space, obj) {
+        let res;
+
+        safety = (safety != null && safety === true) ? safty : false;
+
+        if (safety) {
+            res = JSON.stringify(data, null, space)
+        } else {
+            let stringifyObj = new JsonStringfy(data, space, obj);
+            res = stringifyObj.main();
+        }
+
+        return res;
+    }
+
+    function parse(str) {
+        let context;        
+        let res;
+        try {
+            context = new Function("data", 'return eval("(" + data +")");');
+            res = context.call({}, str);
+        } catch (error) {
+            res = error;
+        }
+        return res;
+    };
     //==========================================================================
+    // 參數
+
     // 需要轉換的類型
     const tactics = {
         // 判斷日期
         Date: function (targetObj, judge, obj) {
             if (judge) {
-                let className = JsonStringfy.className(targetObj);
+                let className = getClassName(targetObj);
                 return /Date/i.test(className);
             }
             //----------------------------
             let evalString = `new Date("${targetObj.toISOString()}")`;
             //----------------------------
-            let job_id = obj.getJobUID();
-            let code = obj.fn.getCode(job_id);
+            let job_id = obj._getJobUID();
+            let code = getCode(job_id);
 
             obj.jobs[job_id] = evalString;
 
@@ -47,7 +76,7 @@
         // 判斷 RegExp
         RegExp: function (targetObj, judge, obj) {
             if (judge) {
-                let className = JsonStringfy.className(targetObj);
+                let className = getClassName(targetObj);
                 return /RegExp/i.test(className);
             }
             //----------------------------
@@ -59,19 +88,23 @@
             for (let i = 0; i < options.length; i++) {
                 optionList.push(`"${options.charAt(i)}"`);
             }
-
             // debugger;
             let evalString;
-            source = source.replace(/\\/, "\\\\");
-            if(optionList.length){
+            source = source.replace(REGEXP_ESCAPED_CHARS_REGEXP(), function (str) {
+                debugger;
+                let res = REGEXP_ESCAPED_CHARS[str];
+                return res;
+            });
+
+            if (optionList.length) {
                 let option = optionList.join(",")
                 evalString = `(new RegExp("${source}",${option}))`;
-            }else{
+            } else {
                 evalString = `(new RegExp("${source}"))`;
             }
             //----------------------------
-            let job_id = obj.getJobUID();
-            let code = obj.fn.getCode(job_id);
+            let job_id = obj._getJobUID();
+            let code = getCode(job_id);
 
             obj.jobs[job_id] = evalString;
 
@@ -81,7 +114,7 @@
         Map: function (targetObj, judge, obj) {
             // debugger;
             if (judge) {
-                let className = JsonStringfy.className(targetObj);
+                let className = getClassName(targetObj);
                 return /Map/i.test(className);
             }
             //----------------------------
@@ -89,11 +122,11 @@
             let res = [];
 
             targetObj.forEach(function (v, k) {
-                k = stringify(k, obj.options, obj);
-                v = stringify(v, obj.options, obj);
+                k = stringify(k, false, obj.space, obj);
+                v = stringify(v, false, obj.space, obj);
                 res.push(`[${k}, ${v}]`);
             });
-            debugger;
+            // debugger;
             if (res.length > 0) {
                 res = res.join(',');
             } else {
@@ -101,8 +134,8 @@
             }
             let evalString = "(new Map([" + res + "]))";
             //----------------------------
-            let job_id = obj.getJobUID();
-            let code = obj.fn.getCode(job_id);
+            let job_id = obj._getJobUID();
+            let code = getCode(job_id);
 
             obj.jobs[job_id] = evalString;
 
@@ -110,87 +143,89 @@
         },
         // Set
         Set: function (targetObj, judge, obj) {
+            if (judge) {
+                let className = getClassName(targetObj);
+                return /Set/i.test(className);
+            }
+            //----------------------------
 
         }
     };
-    //--------------------------------------
-    function stringify(data, options, obj) {
+    //----------------------------
+    const UNSAFE_CHARS_REGEXP = function () {
+        return /[<>\/\u2028\u2029]/g;
+    };
 
-        let stringifyObj = new JsonStringfy(data, options, obj);
-        return stringifyObj.result();
-    }
-    //--------------------------------------
+    const ESCAPED_CHARS = {
+        '<': '\\u003C',
+        '>': '\\u003E',
+        '/': '\\u002F',
+        '\u2028': '\\u2028',
+        '\u2029': '\\u2029'
+    };
+
+    const REGEXP_ESCAPED_CHARS_REGEXP = function () {
+        return /\\|"/g;
+    };
+    const REGEXP_ESCAPED_CHARS = {
+        '\\': "\\\\",
+        '"': '\\"'
+    };
+
+    const UID = Math.floor(Math.random() * 0x10000000000).toString(16);
+    //----------------------------
+    const PLACE_HOLDER_REGEXP = function () {
+        return (new RegExp(`"@@_${UID}_(\\d+)_${UID}_@@"`, "g"));
+    };
+    //----------------------------
+    function getCode(id) {
+        return `@@_${UID}_${id}_${UID}_@@`;
+    };
+    //----------------------------
+    function getClassName(obj) {
+        let className = Object.prototype.toString.call(obj);
+        let regRes = /\[object\s+(\S+?)\]/i.exec(className);
+
+        className = (regRes && regRes[1]) ? regRes[1] : null;
+
+        return className;
+    };
+    //==========================================================================
     // json.stringfy() 主體
-    function JsonStringfy(data, options, prev_obj) {
+    // data: 要格式化的資料
+    // space: 空格，原始 json.stringfy() 的設定
+    // prev_obj: 是否有上一層的物件(演算法用)
+    function JsonStringfy(data, space, prev_obj) {
+        'use strict';
+
         this.fn = JsonStringfy;
         this.data = data;
-        this.options;
+        this.space;
         this.jobs = {};
         this.job_UID = 1;
         this.prev_obj;
 
-        this.__constructor(options, prev_obj);
+        this.__constructor(space, prev_obj);
     }
 
-    (function (fn) {
-        fn.IS_NATIVE_CODE_REGEXP = /\{\s*\[native code\]\s*\}/g;
-        // fn.UNSAFE_CHARS_REGEXP = /[<>\/\u2028\u2029]/g;
-
-        fn.ESCAPED_CHARS = {
-            '<': '\\u003C',
-            '>': '\\u003E',
-            '/': '\\u002F',
-            '\u2028': '\\u2028',
-            '\u2029': '\\u2029'
-        };
-        fn.UID = Math.floor(Math.random() * 0x10000000000).toString(16);
-
-        fn.PLACE_HOLDER_REGEXP = function () {
-            return (new RegExp(`"@@_${fn.UID}_(\\d+)_${fn.UID}_@@"`, "g"));
-        };
-
-        fn.jobs = {};
-
-        fn.job_UID = 1;
-        //--------------------------------------
-        fn.className = function (obj) {
-            let className = Object.prototype.toString.call(obj);
-            let regRes = /\[object\s+(\S+?)\]/i.exec(className);
-
-            className = (regRes && regRes[1]) ? regRes[1] : null;
-
-            return className;
-        };
-        //--------------------------------------
-        fn.getCode = function (id) {
-            return `@@_${fn.UID}_${id}_${fn.UID}_@@`;
-        };
-
-    })(JsonStringfy);
-
     (function () {
-        this.__constructor = function (options, prev_obj) {
-            this.options = options || undefined;
+        this.__constructor = function (space, prev_obj) {
+            this.space = (typeof space == "number") ? space : null
 
-            if(prev_obj){
+            if (prev_obj) {
                 this.prev_obj = prev_obj;
+
+                // 關連到最原始的 jobs
+                // 位址映射
                 this.jobs = this.prev_obj.jobs;
             }
         };
-
         //--------------------------------------
-        this.result = function () {
-            let str;
-            //----------------------------
+        this.main = function () {
+            // debugger;
+
             // 主要步驟
-
-            let $this = this;
-            let replacer = function (key, value) {
-                return $this.replacer(key, value, this[key]);
-            };
-
-            str = JSON.stringify(this.data, replacer);
-
+            let str = JSON.stringify(this.data, this._getReplacer());
 
             //----------------------------
             // Protects against `JSON.stringify()` returning `undefined`, by serializing
@@ -198,52 +233,72 @@
             if (typeof str !== 'string') {
                 str = String(str);
             }
-            debugger;
-            // Replaces all occurrences of function, regexp and date placeholders in the
-            // JSON string with their string representations. If the original value can
-            // not be found, then `undefined` is used.
-            if(!this.prev_obj && Object.keys(this.jobs).length > 0){
-               debugger; 
-               str = this.callJob(str);
+            // debugger;
+            //----------------------------
+            // Replace unsafe HTML and invalid JavaScript line terminator chars with
+            // their safe Unicode char counterpart. This _must_ happen before the
+            // regexps and functions are serialized and added back to the string.
+            str = str.replace(UNSAFE_CHARS_REGEXP(), function (unsafeChar) {
+                return ESCAPED_CHARS[unsafeChar];
+            });
+            //----------------------------
+            if (!this.prev_obj && Object.keys(this.jobs).length > 0) {
+                debugger;
+                // 來到最遠始的上層
+                str = this._callJob(str);
             }
 
             return str;
         };
         //--------------------------------------
+        this._getReplacer = function () {
+            let $this = this;
+            return function (key, value) {
+                return $this._replacer(key, value, this[key]);
+            };
+        };
+        //--------------------------------------
         //
-        this.replacer = function (key, value, originalValue) {
+        this._replacer = function (key, value, originalValue) {
 
-            let tactics = this.findTactics(originalValue);
+            // 找尋轉換的策略
+            let tactics = this._findTactics(originalValue);
 
             if (tactics.length > 1) {
+                // 若有多個轉換策略
                 throw new Error("have multi tactic");
             } else if (tactics.length == 0) {
+                // 沒有相應的轉換策略
                 return value;
             }
 
             let fn = tactics[0];
 
-            return fn(originalValue, false, this);
+            // 轉換
+            let res = fn(originalValue, false, this);
+            return res;
         };
         //--------------------------------------
-        this.getJobUID = function(){
-            if(this.prev_obj){
+        //
+        this._getJobUID = function () {
+            if (this.prev_obj) {
                 return this.prev_obj.job_UID++;
-            }else{
+            } else {
                 return this.job_UID++
             }
         };
-
-        this.callJob = function (str) {
-            debugger;
+        //--------------------------------------
+        // 把轉換過的字再轉換回來
+        this._callJob = function (str) {
+            // debugger;
 
             let $this = this;
 
-            while(this.fn.PLACE_HOLDER_REGEXP().test(str)){
-                str = str.replace(this.fn.PLACE_HOLDER_REGEXP(), function (match, g_1) {
-                    debugger;
+            while (PLACE_HOLDER_REGEXP().test(str)) {
+                str = str.replace(PLACE_HOLDER_REGEXP(), function (match, g_1) {
+                    // debugger;
                     let str = $this.jobs[g_1];
-                    delete $this.jobs[g_1];    
+                    delete $this.jobs[g_1];
                     return str;
                 });
             }
@@ -251,25 +306,19 @@
             return str;
         };
         //--------------------------------------
-        this.escapeUnsafeChars = function (unsafeChar) {
-            return ESCAPED_CHARS[unsafeChar];
-        };
-        //--------------------------------------
         // 找出轉換策略
-        this.findTactics = function (targetObj) {
+        this._findTactics = function (targetObj) {
             let res = [];
 
             let fn;
             for (let k in tactics) {
                 fn = tactics[k];
-                if(fn(targetObj, true, this)){
+                if (fn(targetObj, true, this)) {
                     res.push(fn);
                 }
             }
             return res;
         };
-        ///////////////////////////////////////////////////////////////////////
-        
 
     }).call(JsonStringfy.prototype);
 
