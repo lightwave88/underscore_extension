@@ -40,13 +40,26 @@
 
         return res;
     }
-
-    function parse(str) {
-        let context;        
+    //----------------------------
+    function parse(str, safety) {
         let res;
+        if (safety != null && safety === true) {
+            try {
+                res = JSON.parse(str);
+            } catch (error) {
+                res = error;
+            }
+            return res;
+        }
+        //-----------------------
+        let context;
         try {
-            context = new Function("data", 'return eval("(" + data +")");');
-            res = context.call({}, str);
+            context = new Function(`'use strict';\n
+                let global = {};\n
+                let res = (${str});\n 
+                return res;
+            `);
+            res = context.call({});
         } catch (error) {
             res = error;
         }
@@ -148,7 +161,27 @@
                 return /Set/i.test(className);
             }
             //----------------------------
+            let res = [];
 
+            targetObj.forEach(function (v) {
+                v = stringify(v, false, obj.space, obj);
+                res.push(`${v}`);
+            });
+
+            // debugger;
+            if (res.length > 0) {
+                res = res.join(',');
+            } else {
+                res = '';
+            }
+            let evalString = "(new Set([" + res + "]))";
+            //----------------------------
+            let job_id = obj._getJobUID();
+            let code = getCode(job_id);
+
+            obj.jobs[job_id] = evalString;
+
+            return code;
         }
     };
     //----------------------------
