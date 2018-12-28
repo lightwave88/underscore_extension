@@ -23,6 +23,79 @@
             jsonParse: parse
         });
     }
+
+    // safety: 是否採用安全預設的方式轉換(但有些數據格式無法轉換)
+    // obj: 不需設定，系統內部使用 
+    function stringify(data, safety, space, obj) {
+        let res;
+
+        safety = (safety != null && safety === true) ? safty : false;
+
+        if (safety) {
+            res = JSON.stringify(data, null, space)
+        } else {
+            let stringifyObj = new JsonStringfy(data, space, obj);
+            res = stringifyObj.main();
+        }
+
+        return res;
+    }
+    //----------------------------
+    function parse(str, safety, args) {
+        let res;
+        if (safety != null && safety === true) {
+            try {
+                res = JSON.parse(str);
+            } catch (error) {
+                res = error;
+            }
+            return res;
+        }
+        //-----------------------
+        args = args || [];
+
+        let vars = '';
+        let context;
+        let data = {};
+        //-----------------------
+        args.forEach(function (v) {
+            if (typeof v != "function" || !v.name) {
+                return;
+            }
+            let name = v.name;
+            vars += `let ${name} = data["${name}"];\n`;
+
+            data[name] = v;
+        });
+        //-----------------------
+        try {
+            context = new Function('data',
+                `'use strict'\n
+                let global = {};\n
+                let window = {};\n
+                
+                ${vars}   
+
+                let res = (${str});\n 
+                return res;
+            `);
+            debugger;
+            res = context.call({}, data);
+        } catch (error) {
+            res = error;
+        }
+        return res;
+    };
+
+    (function (fn) {
+        // 物件使用
+        fn.evalStringify = function (str) {
+            debugger;
+            let regStr = EvalStringify_REGEXP().source;
+            regStr = regStr.replace(/\(\[\\s\\S\]\*\)/, str);
+            return regStr;
+        };
+    })(stringify);
     //==========================================================================
     // 參數
 
@@ -215,67 +288,7 @@
     };
     //==========================================================================
 
-    // safety: 是否採用安全預設的方式轉換(但有些數據格式無法轉換)
-    // obj: 不需設定，系統內部使用 
-    function stringify(data, safety, space, obj) {
-        let res;
 
-        safety = (safety != null && safety === true) ? safty : false;
-
-        if (safety) {
-            res = JSON.stringify(data, null, space)
-        } else {
-            let stringifyObj = new JsonStringfy(data, space, obj);
-            res = stringifyObj.main();
-        }
-
-        return res;
-    }
-    //----------------------------
-    function parse(str, safety, args) {
-        let res;
-        if (safety != null && safety === true) {
-            try {
-                res = JSON.parse(str);
-            } catch (error) {
-                res = error;
-            }
-            return res;
-        }
-        //-----------------------
-        let context;
-
-        args = args || {};
-        try {
-            context = new Function('data',
-                `let global = {};\n
-                let window = {};\n
-                
-                for(let key in data){
-                    let command = 'var '+key+'=data["'+key+'"];';
-                    eval(command);
-                }
-
-                let res = (${str});\n 
-                return res;
-            `);
-            debugger;
-            res = context.call({}, args);
-        } catch (error) {
-            res = error;
-        }
-        return res;
-    };
-    //==========================================================================
-    (function (fn) {
-        // 物件使用
-        fn.evalStringify = function (str) {
-            debugger;
-            let regStr = EvalStringify_REGEXP().source;
-            regStr = regStr.replace(/\(\[\\s\\S\]\*\)/, str);
-            return regStr;
-        };
-    })(stringify);
 
     //==========================================================================
     // json.stringfy() 主體
