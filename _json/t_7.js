@@ -42,17 +42,23 @@ let p = new P({
 debugger;
 
 
+
+
+
+function test(){
+    let r = _.jsonStringify({
+        name: "ggyy",
+        p: p
+    });
+    
+    console.log(r);
+    return r;
+}
+
 let res;
+// res = test();
 
-res = _.jsonStringify({
-    name: "ggyy",
-    p: p
-});
-
-console.log(res);
-
-
-// res = '{"name":"ggyy","p":new P({"name":"xyz","age":20})}';
-res = _.jsonParse(res, false, { P: P });
+res = '{"name":"ggyy","p":new P({"name":"xyz","age":20})}';
+res = _.jsonParse(res, false, [P]);
 
 console.dir(res.p.name);
