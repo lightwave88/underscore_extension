@@ -21,7 +21,8 @@
     // 參數設定
     const templateSetting = {
         evaluate: /<script>([\s\S]*?)<\/script>/g,
-        escape: /<%=([\s\S]*?)%>/g,
+        interpolate: /<%=([\s\S]+?)%>/g,
+        escape: /<%-([\s\S]*?)%>/g,
         escapeMap: {
             '&': '&amp;',
             '<': '&lt;',
@@ -73,16 +74,17 @@
             }
             //----------------------------
             let evaluate = settings.evaluate;
+            let interpolate = settings.interpolate;
             let escape = settings.escape;
 
-            reg = `(?:${evaluate.source})|(?:${escape.source})|(?:$)`;
+            reg = `(?:${evaluate.source})|(?:${interpolate.source})|(?:${escape.source})|(?:$)`;
             // console.log(reg);
             reg = RegExp(reg, 'g');
 
             let source = "";
 
             let index = 0;
-            template = template.replace(reg, function (m, g1, g2, offset) {
+            template = template.replace(reg, function (m, g1, g2, g3, offset) {
                 debugger;
                 let str = template.slice(index, offset);
                 index = offset + m.length;
@@ -92,7 +94,7 @@
                     str = _escape_1(str);
                     source += `self.print(\`${str}\`);\n`;
                 }
-
+                //-----------------------
                 if (g1) {
                     // js 運作區
                     // g1 = _escape_1(g1);
@@ -101,7 +103,12 @@
                     // <%= %>
                     g2 = g2.trim();
                     g2 = _escape_1(g2);
-                    source += `self.escape(\`${g2}\`);\n`;
+                    source += `self.print(\`${g2}\`);\n`;
+                } else if (g3) {
+                    // <%- %>
+                    g3 = g3.trim();
+                    g3 = _escape_1(g3);
+                    source += `self.escape(\`${g3}\`);\n`;
                 }
                 return '';
             });
