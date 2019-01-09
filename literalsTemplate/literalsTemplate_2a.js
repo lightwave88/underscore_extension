@@ -31,6 +31,12 @@
             '`': '&#x60;'
         }
     };
+
+    const escapeReg = function () {
+        let source = Object.keys(templateSetting.escapeMap).join('|');
+        source = `(?:${source})`;
+        return RegExp(source, 'g');
+    };
     ////////////////////////////////////////////////////////////
 
     function factory(_) {
@@ -46,12 +52,7 @@
 
             let functionStr = compile_1(str, settings);
 
-            let modules = {
-                print: print,
-                escape: escape
-            };
-
-            return compile_2(functionStr, modules);
+            return compile_2(functionStr);
         }
         //----------------------------
         (function (fn) {
@@ -78,7 +79,7 @@
             // console.log(reg);
             reg = RegExp(reg, 'g');
 
-            let source = "let source = [];\n";
+            let source = "";
 
             let index = 0;
             template = template.replace(reg, function (m, g1, g2, offset) {
@@ -87,44 +88,47 @@
                 index = offset + m.length;
 
                 if (str.length) {
+                    // 一班網頁文字區
                     str = _escape_1(str);
-                    source += `source.push(\`${str}\`);\n`;
+                    source += `self.print(\`${str}\`);\n`;
                 }
 
                 if (g1) {
-                    // <% %>
-                    g1 = _escape_1(g1);
+                    // js 運作區
+                    // g1 = _escape_1(g1);
                     source += `${g1}`;
                 } else if (g2) {
                     // <%= %>
                     g2 = g2.trim();
                     g2 = _escape_1(g2);
-                    source += `source.push(this.escape(\`${g2}\`));\n`;
+                    source += `self.escape(\`${g2}\`);\n`;
                 }
                 return '';
             });
-
-            source += 'return (source.join(""));\n';
-
+            source += 'return (self.$$$contentList.join(""));\n';
             return source;
         }
         //----------------------------
         // modules: 內部的功能模組
-        function compile_2(functionStr, modules) {
+        function compile_2(functionStr) {
 
             // modules: 內部的功能模組
             // str: 模版內容
             // data: 使用者給定
             // context: 是否要指定模版的上下文
-            return (function(modules, str, data, context) {
+            return (function (str, data, context) {
+                debugger;
                 'use strict';
 
-                debugger;
-                if (context == null || typeof (context) != "object") {
-                    context = {};
-                }
+                let module = getModule();
 
-                _.extendOwn(context, modules);
+                if (context == null) {
+                    context = module;
+                } else {
+                    for (let k in module) {
+                        context[k] = module[k];
+                    }
+                }
 
                 if (data == null || typeof (data) != "object") {
                     data = {};
@@ -139,29 +143,32 @@
                 });
                 let fnContent = `
                     'use strict'\n
+                    const self = _self;
                     debugger;
                     ${command}
                     ${str}`;
                 //----------------------------
                 let fun;
                 try {
-                    fun = new Function('data', fnContent);
+                    debugger;
+                    fun = new Function('_self', 'data', fnContent);
                 } catch (error) {
+                    console.log(fnContent);
                     throw new Error(`build template error(${String(error)})`);
-                }                
+                }
                 //----------------------------
                 let htmlContent = '';
                 try {
-                    htmlContent = fun.call(context, data);
+                    htmlContent = fun.call(context, context, data);
                 } catch (error) {
                     throw new Error(`run template error(${String(error)}) => (${fun.toString()})`);
                 }
                 return htmlContent;
 
-            }).bind({}, modules, functionStr);
+            }).bind({}, functionStr);
         }
         //----------------------------
-        function print(html) {
+        function _print(html) {
             if (html === undefined) {
                 html = "undefined";
             } else if (html === null) {
@@ -170,31 +177,9 @@
                 html = JSON.stringify(html);
             } else {
                 try {
-                    html += "";                    
+                    html += "";
                 } catch (error) {
                     html = "";
-                }
-            }
-            return html;
-        }
-        //----------------------------
-        function escape(html) {
-            html = print(html);
-
-            if (_.escape != null) {
-                html = _.escape(html);
-            } else {
-                let source = Object.keys(templateSetting.escapeMap).join('|');
-                source = `(?:${source})`;
-                var testRegexp = RegExp(source);
-                var replaceRegexp = RegExp(source, 'g');
-
-                html = (html == null) ? '' : '' + html;
-
-                if (testRegexp.test(html)) {
-                    html = html.replace(replaceRegexp, function (match) {
-                        return templateSetting.escapeMap[match];
-                    });
                 }
             }
             return html;
@@ -207,6 +192,33 @@
             });
             return str;
         }
+        //----------------------------
+        // 模板後面的功能模組
+        function getModule() {
+            let obj = {
+                $$$contentList: [],
+                print: function (html) {
+                    html = _print(html);
+                    this.$$$contentList.push(html);
+                },
+
+                escape: function (html) {
+                    html = _print(html);
+                    if (_.escape != null) {
+                        html = _.escape(html);
+                    } else {
+                        let reg = escapeReg();
+                        html = html.replace(reg, function (m) {
+                            return templateSetting.escapeMap[m];
+                        });
+                    }
+                    this.$$$contentList.push(html);
+                }
+            };
+
+            return obj;
+        }
+
     } // end factory
 })(this || {});
 
