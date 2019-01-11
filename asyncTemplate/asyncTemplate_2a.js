@@ -1,4 +1,4 @@
-!(function (global) {
+!(function (_global) {
 
     ////////////////////////////////////////////////////////////////////////////
     //
@@ -28,8 +28,6 @@
             return support;
         }
     })();
-
-
     //==========================================================================
 
     (function () {
@@ -38,10 +36,10 @@
             // 指定 loadash|underscode 的 path
             module.exports = function (obj) {
                 // 建構
-                factory(obj);
+                factory(global, obj);
             };
         } else {
-            if (global._ == null || _.$$extension == null) {
+            if (_global._ == null || _.$$extension == null) {
                 return;
             }
 
@@ -49,11 +47,10 @@
 
             switch (environment) {
                 case 'browser':
-                    let $ = global.$ || global.jQuery || null;
-                    factory(global._);
+                    factory(_global, _global._);
                     break;
                 default:
-                    noSupportFactory(global._);
+                    noSupportFactory(_global._);
                     break;
             }
         }
@@ -74,9 +71,9 @@
     }
     //==========================================================================
 
-    function factory(_) {
+    function factory(_global, _) {
 
-        // jq_factory();
+        jq_factory(_global);
 
         _.mixin({
             asyncTemplate: asyncTemplateCommand
@@ -153,9 +150,6 @@
 
             this.$content;
 
-            // 原來的 html 內容
-            this.$htmlContent;
-
             // 原来的 js 内容
             this.$javascriptContent;
 
@@ -165,7 +159,7 @@
             // 模版内容里的使用者設定
             this.$templateOptions = {};
 
-            // 模板內部可以設定的 options 
+            // 模板內部可以設定的 options
             this.$_default_templateOptions = {
                 dataloading: null,
                 dataloaded: null,
@@ -195,6 +189,7 @@
             // templateloading: callback, 開始載入模板執行
             // templateloaded: callback, 模板載入後執行
             // cssKeep: unmout 後是否要繼續保留 css
+            // ajax: 使用預設取得方式
             this.$options = {
                 getData: null,
                 literals: true,
@@ -202,8 +197,15 @@
                 render: null,
                 templateloading: null,
                 templateloaded: null,
-                cssKeep: false
+                cssKeep: false,
+                ajax: {
+                    url: null,
+                    type: 'get',
+                    data: {}
+                }
             };
+
+            this.$tempRootDom;
 
             // 模版函式
             this.$templateFn;
@@ -223,13 +225,13 @@
 
             fn.$style_uid = 1;
 
-            fn.$command_head = "let templateOptions;";
+            fn.$command_head = "let templateOptions;\n";
 
-            fn.$command_footer = "if(templateOptions != null && typeof(templateOptions) == 'object'){\
-            return templateOptions;\
-        }else{\
-            return null;\
-        }";
+            fn.$command_footer = "if(templateOptions != null && typeof(templateOptions) == 'object'){\n\
+            return templateOptions;\n\
+        }else{\n\
+            return null;\n\
+        }\n";
 
         })(TemplateItem);
         //--------------------------------------------------------------------------
@@ -276,14 +278,26 @@
                     };
                 }
                 //-----------------------
-                for (let key in this.$options) {
-                    if (options[key] != null) {
-                        this.$options[key] = options[key];
-                    }
-                }
+                // debugger;
+                copyOptions(options, this.$options);
                 //-----------------------
                 if (!isSupport_literalsTemplate) {
                     this.$options.literals = false;
+                }
+                //-----------------------
+                function copyOptions(source, target) {
+                    for (let k in target) {
+
+                        if (source[k] != null) {
+
+                            if (/^ajax$/.test(k)) {
+                                copyOptions(source[k], target[k]);
+                            } else {
+                                target[k] = source[k];
+                            }
+
+                        }
+                    }
                 }
             };
             //------------------------------------------------------------------
@@ -302,7 +316,7 @@
                 }
                 //-----------------------
                 let p = this.$deferred.promise();
-                p = Promise.resolve(p);
+                // p = Promise.resolve(p);
 
                 p.doneWith(function () {
                     // debugger;
@@ -331,7 +345,7 @@
                 debugger;
 
                 let p = this.$deferred.promise();
-                p = Promise.resolve(p);
+                // p = Promise.resolve(p);
 
                 p.doneWith(function () {
                     this.$usedDom.delete(dom);
@@ -374,6 +388,10 @@
             //------------------------------------------------
             // 插入 style
             this.$insertStyle = function () {
+                if (this.$cssContent == null || this.$cssContent.length < 1) {
+                    return;
+                }
+
                 // 先檢查 style 是否存在
                 let id = _asyncTemplateSetting["styleId_head"] + this.$style_id;
                 let styleDom = document.querySelector(("#" + id));
@@ -414,7 +432,7 @@
                 }
 
                 data = _.extend({}, this.$templateOptions.data, data);
-                let htmlContent = this.$htmlContent;
+                let htmlContent = this.$tempRootDom.innerHTML;
 
                 try {
                     htmlContent = this.$templateFn(data);
@@ -448,11 +466,10 @@
             this.$importTemplateOptionsFromScript = function () {
 
                 let res;
-                if (this.$javascriptContent.length > 0) {
-                    
-                    
+                if (this.$javascriptContent != null && this.$javascriptContent.length > 0) {
+
                     let command = "'use strict'\n";
-                    command += TemplateItem.$command_head;    
+                    command += TemplateItem.$command_head;
                     command += this.$javascriptContent;
                     command += TemplateItem.$command_footer;
 
@@ -469,7 +486,6 @@
                 if (!res) {
                     return;
                 }
-
                 this.$templateOptions = res;
 
                 for (let k in this.$_default_templateOptions) {
@@ -483,6 +499,7 @@
             // 取得 模版 的內容
             // 最主要非同步的步驟
             this.$asyncGetTemplate = function () {
+                // debugger;
 
                 if (this.$options["templateloading"] != null) {
                     this.$options["templateloading"].call(this);
@@ -490,7 +507,21 @@
                 //-----------------------
                 let p;
 
-                if (typeof (this.$options.getData) == "function") {
+                if (this.$options.ajax.url) {
+                    // debugger;
+
+                    let options = _.defaults({}, { dataType: 'html' }, this.$options.ajax);
+
+                    p = new Promise(function (res, rej) {
+                        $.ajax(options)
+                            .done(function (data) {
+                                res(data);
+                            })
+                            .fail(function (err) {
+                                rej(err);
+                            });
+                    });
+                } else if (typeof (this.$options.getData) == "function") {
                     p = this.$options.getData();
                 } else if (this.$options.getData instanceof Promise) {
                     p = this.$options.getData;
@@ -501,8 +532,9 @@
                 p = Promise.resolve(p);
                 //-----------------------
                 // 已取得資料
-
+                // debugger;
                 p.thenWith(function (data) {
+                    // debugger;
                     if (typeof (data) != "string") {
                         throw new TypeError("asyncTemplate data must be string");
                     }
@@ -513,11 +545,14 @@
                     this.$analyzeContent();
 
                     if (this.$options["templateloaded"] != null) {
-                        this.$options["templateloaded"].call(this, null);
+                        this.$options["templateloaded"].call(this, this.$tempRootDom);
                     }
+                    // 确定著色引擎
+                    this.$setTemplateFn();
 
                     this.$deferred.resolve(this);
                 }, function (err) {
+                    // debugger;
                     this.$status = 2;
 
                     if (!(err instanceof Error)) {
@@ -539,6 +574,7 @@
             // 取得 htmlContent, script, style
             this.$analyzeContent = function () {
                 // debugger;
+
                 let parent = document.createElement('div');
                 parent.innerHTML = this.$content;
                 //-----------------------
@@ -546,7 +582,6 @@
                 let scriptList = Array.from(parent.querySelectorAll('script'));
                 let styleList = Array.from(parent.querySelectorAll('style'));
                 //-----------------------
-                // debugger;
 
                 // 移除所有的 script
                 scriptList.forEach(function (dom, i) {
@@ -560,7 +595,8 @@
                 // 移除所有的 style
                 styleList.forEach(function (dom, i) {
                     if (i == 0) {
-                        this.$cssContent = dom.innerHTML;
+                        this.$cssContent = dom.innerHTML || '';
+                        this.$cssContent = this.$cssContent.trim();
                     }
                     dom.parentNode.removeChild(dom);
                 }, this);
@@ -569,34 +605,36 @@
                 // this.domList = parent;
                 let templateDom = parent.querySelector('template');
 
-                this.$htmlContent = (templateDom) ? templateDom.innerHTML : null;
-                parent = undefined;
+                this.$tempRootDom = document.createElement('div');
+                this.$tempRootDom.innerHTML = (templateDom) ? templateDom.innerHTML : '';
+                parent = undefined
+
                 //-----------------------
                 // 匯入使用者设定
                 this.$importTemplateOptionsFromScript();
 
-                // 确定著色引擎
-                this.$setTemplateFn();
             };
             //------------------------------------------------
             // 产生 template 函式
             this.$setTemplateFn = function () {
+
+                let htmlContent = this.$tempRootDom.innerHTML;
                 let options = this.$options;
 
                 if (options.render) {
                     // 若有指派著色引擎
 
                     this.$templateFn = (function (data) {
-                        this.$options.render(this.$htmlContent, data);
+                        this.$options.render(htmlContent, data);
                     }).bind(this);
 
                 } else if (options.literals) {
                     // 采用 es6
-                    let content = this.$htmlContent;
+                    let content = htmlContent;
                     this.$templateFn = _.literalsTemplate(content);
 
                 } else {
-                    this.$templateFn = _.template(this.$htmlContent);
+                    this.$templateFn = _.template(htmlContent);
                 }
             };
             //------------------------------------------------
@@ -605,8 +643,399 @@
     } // end factory
 
     //==========================================================================
-    function jq_factory($) {
+    function jq_factory(_global) {
 
-    };
+        let $ = _global.$ || _global.jQuery || null;
+
+        if (!$) {
+            return;
+        }
+        //----------------------------
+        $.fn.element = function (options) {
+            let targetDom;
+            this.each(function (i, dom) {
+                if (targetDom == null) {
+                    targetDom = dom;
+                } else {
+                    return;
+                }
+            });
+
+            return $.element(targetDom, options);
+        };
+        //----------------------------
+        // 元件(適用於小的區塊)
+        $.element = switchTemplateCommand;
+
+        function switchTemplateCommand(dom, options) {
+            let switchTemplate;
+
+            if (typeof (dom) == "string") {
+                dom = document.querySelector(dom);
+            }
+
+            if (!(dom instanceof EventTarget)) {
+                throw new TypeError('dom typeError');
+            }
+
+            if ($.data(dom, '__us_switchTemplate') == null) {
+                switchTemplate = new SwitchTemplate(dom);
+                $.data(dom, '__us_switchTemplate', switchTemplate);
+            }
+            switchTemplate = $.data(dom, '__us_switchTemplate');
+
+            if ($.isPlainObject(options)) {
+                switchTemplate.set(options);
+            }
+
+            return switchTemplate;
+        }
+        //--------------------------------------
+        // 主要目的是切換 job
+        function SwitchTemplate(dom) {
+            this.$template;
+            this.$data;
+            this.$prev_data;
+            this.$error;
+            //-----------------------
+            this.$dom;
+
+            // 任務
+            this.$job;
+
+            // 使用者設定
+            // 針對元件外部而設
+            //
+            // dataloading: callback
+            // dataloaded: callback
+            // templateloading: callback
+            // allloaded: callback
+            // update: callback
+            // updated: callback
+            this.$options = {
+                dataloading: null,
+                dataloaded: null,
+                templateloading: null,
+                templateloaded: null,
+                allloaded: null,
+                update: null,
+                updated: null
+            }
+            //-----------------------
+            this.__construct(dom);
+        }
+
+        (function () {
+            this.__construct = function (dom) {
+                this.$dom = dom;
+            };
+            //---------------------------------
+            // 更新 template, data
+            // data (function|promise|data)
+            this.update = function (tmplName, data) {
+                debugger;
+                let dataChange = this.$isDataChange(data);
+
+                return this.$checkUpdate(tmplName, dataChange);
+            };
+            //---------------------------------
+            // 更新 template
+            this.template = function (tmplName) {
+                debugger;
+                return this.$checkUpdate(tmplName, false);
+            };
+            //---------------------------------
+            // 更新 data
+            // data 可以是數據， promise, function
+            this.updateData = function (data) {
+                debugger;
+                if (this.$template == null) {
+                    throw new Error("u must assign template first");
+                }
+                let tmplName = this.$template.getName();
+
+                let dataChange = this.$isDataChange(data);
+
+                return this.$checkUpdate(tmplName, dataChange);
+            };
+            //---------------------------------
+            // 加入監聽，及時更新內容
+            this.watch = function () {
+                // 對 _.observe() 暴露 this.data
+
+            };
+            //---------------------------------
+            // 關於設定
+            this.set = function (key, value) {
+                let setting = {};
+
+                if ($.isPlainObject(key)) {
+                    setting = key;
+                } else {
+                    setting[key] = value;
+                }
+
+                for (let k in this.$options) {
+                    if (setting[k] == null) {
+                        continue;
+                    }
+                    this.$options[k] = setting[k];
+                }
+
+            };
+            //---------------------------------
+            // 若正在執行任務中
+            // 終止既有的任務
+            this.stop = function () {
+                if (!this.$job) {
+                    return;
+                }
+                this.$job.stop();
+            };
+            //---------------------------------
+            // 輸入的資料是否與之前有差異
+            this.$isDataChange = function (data) {
+                this.$prev_data = this.$data;
+
+                this.$data = data;
+                if (this.$data instanceof Promise) {
+                    return true;
+                } else if (typeof (this.$data) == "function") {
+                    this.$data = this.$data();
+
+                    if (this.$data instanceof Promise) {
+                        return true;
+                    }
+                }
+                return (_.isEqual(this.$data, this.$prev_data))
+            };
+            //---------------------------------
+            this.$checkUpdate = function (tmplName, dataChange) {
+                debugger;
+
+
+                if (!tmplName) {
+                    throw new TypeError('tmplName typeError');
+                }
+
+                if (!_.asyncTemplate(tmplName)) {
+                    throw new Error('template(' + tmplName + ') no exists');
+                }
+
+                templateChange = this.$isTemplateChange(tmplName);
+
+                if (!dataChange && !templateChange) {
+                    return Promise.resolve();
+                }
+
+                // 開啟一個 job
+                return this.$startJob(tmplName, dataChange, templateChange);
+            };
+            //---------------------------------
+            this.$isTemplateChange = function (tmplName) {
+                let prev_templName = (this.$template == null ? '' : this.$template.getName());
+
+                return (tmplName.localeCompare(prev_templName) != 0);
+            };
+            //---------------------------------
+            this.$startJob = function (tmplName, dataChange, templateChange) {
+                this.$error = null;
+
+                // 創建一個 job
+
+                let template = templateChange ? (_.asyncTemplate(tmplName)) : this.$template;
+
+                this.$job = new SwitchJob(this, template, this.$data, dataChange, templateChange);
+                let p = this.$job.update();
+
+                p.alwaysWith(function (err, data) {
+                    this.$job == null;
+                }, this);
+
+                return p;
+            };
+
+        }).call(SwitchTemplate.prototype);
+        //======================================================================
+        // 任務: 處理 template, data
+        // 是否要負責 render ??
+        function SwitchJob(parent, template, data, dataChange, templateChange) {
+            this.$dom;
+
+            this.$deferred;
+            //-----------------------
+            this.$dataChange;
+            this.$templateChange;
+            //-----------------------
+            this.$parent;
+            this.$status = 0;
+            //-----------------------
+            this.$template;
+            this.$data;
+            //-----------------------
+            this.$error;
+
+            // 開關
+            this.$stop = false;
+            //-----------------------
+            this.__construct(parent, template, data, dataChange, templateChange);
+        }
+
+        (function () {
+            this.__construct = function (parent, template, data, dataChange, templateChange) {
+                this.$parent = parent;
+
+                this.$dataChange = dataChange;
+                this.$templateChange = templateChange;
+
+                this.$dom = this.$parent.$dom;
+                this.$data = data;
+                this.$template = template;
+
+                this.$deferred = _.deferred();
+            };
+            //---------------------------------
+            this.stop = function () {
+                this.$stop = true;
+                this.$deferred.reject();
+            };
+            //---------------------------------
+            // 對外 API
+            this.update = function () {
+                this._call_hook('update');
+
+                // wait data
+                let p1 = this._aboutData();
+
+                // wait template
+                let p2 = this.$template.promise();
+
+                if (!this.$template.loaded()) {
+                    this._call_hook('templateloading');
+
+                    p2.alwaysWith(function (err, data) {
+                        if (err) {
+                            this.$error = (err instanceof Error) ? err : new Error(err);
+                        }
+                        this._call_hook('templateloaded');
+                    }, this);
+                }
+                //-----------------------
+                let p3 = Promise.all([p1, p2]);
+
+                p3.alwaysWith(function (err, data) {
+                    this._allLoaded(err, data);
+                }, this);
+
+                return this.$deferred.promise();
+            };
+            //---------------------------------
+            // template, data 都 load 完
+            this._allLoaded = function (err, data) {
+                debugger;
+
+                if (this.$stop) {
+                    return;
+                }
+
+                if (err) {
+                    this.$status = 2;
+                    this.$error = (err instanceof Error) ? err : new Error(err);
+
+                    this._call_hook('allloaded');
+                    this._call_templateHook('allloaded');
+
+                    this.$deferred.reject(err);
+
+                } else {
+
+                    let p = Promise.resolve();
+
+                    let dom = this.$dom;
+
+                    this.$status = 1;
+
+                    this._call_hook('allloaded');
+                    this._call_templateHook('allloaded');
+                    //-----------------------
+                    if (this.$templateChange) {
+                        if (this.$parent.$template) {
+                            p = this.$parent.$template.unmount(dom, this.$data);
+                        }
+
+                        p = p.doneWith(function () {
+                            debugger;
+                            return this.$template.mount(dom, this.$data);
+                        }, this);
+                    } else if (this.$dataChange) {
+                        this.$template.updateData(dom, this.$data);
+                    }
+                    //-----------------------
+                    p.doneWith(function () {
+                        debugger;
+
+                        // 更新 parent 數據
+                        this._upDateParent();
+
+                        this._call_hook('updated');
+
+                        this.$deferred.resolve();
+                    }, this);
+
+                }
+            };
+            //---------------------------------
+            // 更新 parent 數據
+            this._upDateParent = function () {
+                if (this.$dataChange) {
+                    this.$parent.$data = this.$data;
+                }
+
+                if (this.$templateChange) {
+                    this.$parent.$template = this.$template;
+                }
+
+                this.$parent.$error = this.$error;
+            };
+            //---------------------------------
+            // 資料的取得方式
+            this._aboutData = function () {
+
+                if (this.$dataChange) {
+                    this._call_hook('dataloading');
+                    this._call_templateHook('dataloading');
+                }
+                //-----------------------
+                let p = Promise.resolve(this.$data);
+                //-----------------------
+                // 取得資料
+                p.alwaysWith(function (err, data) {
+                    if (!err) {
+                        this.$data = data;
+                    }
+                    // 執行 hook
+                    if (this.$dataChange) {
+                        this._call_hook('dataloaded');
+                        this._call_templateHook('dataloaded');
+                    }
+                }, this);
+
+                return p;
+            };
+            //---------------------------------
+            this._call_templateHook = function (hookName) {
+                this.$template.call_hook(this.$dom, hookName);
+            };
+            //---------------------------------
+            this._call_hook = function (hookName) {
+                let parentOptions = this.$parent.$options;
+
+                if (typeof (parentOptions[hookName]) == 'function') {
+                    parentOptions[hookName].call(this.$dom, this.$error, this.$dom);
+                }
+            };
+
+        }).call(SwitchJob.prototype);
+    }; // end jq_factory
 
 }(this || {}));
