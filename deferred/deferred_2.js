@@ -78,7 +78,7 @@
                     onRejected = onRejected.bind(context);
                 }
 
-                return this.then(onFulfilled, null);
+                return this.then(onFulfilled, onRejected);
             };
         }
         //----------------------------------------------------------------------
@@ -119,7 +119,7 @@
                 }
                 /*--------------------------*/
                 return this.then(function (data) {
-                    callback(false, data);
+                    callback(null, data);
                 }, function (error) {
                     callback(true, error);
                 });
@@ -141,7 +141,7 @@
                 callback = callback.bind(context);
 
                 return this.then(function (data) {
-                    callback(false, data);
+                    callback(null, data);
                 }, function (error) {
                     callback(true, error);
                 });
