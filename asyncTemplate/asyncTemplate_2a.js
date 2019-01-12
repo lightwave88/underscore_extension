@@ -177,6 +177,10 @@
 
             this.$error;
 
+            // 當 template 還在 load
+            // 若有人取消 mount
+            this.$cancelMount = new Set();
+
             // 針對 css 的垃圾回收
             // 當沒有 dom 引用此 template時
             // css 當移除
@@ -344,23 +348,19 @@
             this.unmount = function (dom) {
                 debugger;
 
-                let p = this.$deferred.promise();
-                // p = Promise.resolve(p);
+                if(!this.$usedDom.has(dom)){
+                    return;
+                }
 
-                p.doneWith(function () {
-                    this.$usedDom.delete(dom);
+                this.$usedDom.delete(dom);
 
-                    // 執行 unbind script
-                    this.$call_hook(dom, 'unmounted');
+                // 執行 unbind script
+                this.$call_hook(dom, 'unmounted');
 
-                    // 移除 html
-                    this.$removeHtmlContent(dom);
+                // 移除 html
+                this.$removeHtmlContent(dom);
 
-
-                    this.$removeStyle();
-                }, this);
-
-                return p;
+                this.$removeStyle();
             };
             //------------------------------------------------
             // 當使用者想對某個使用該模板的 dom 更新 data
@@ -449,7 +449,6 @@
             //------------------------------------------------
             this.$call_hook = function (dom, callbackName) {
 
-
                 if (typeof (this.$options[callbackName]) == "function") {
                     this.$options[callbackName].call(this, this.$error, dom);
                 }
@@ -501,9 +500,7 @@
             this.$asyncGetTemplate = function () {
                 // debugger;
 
-                if (this.$options["templateloading"] != null) {
-                    this.$options["templateloading"].call(this);
-                }
+                this.$call_hook(null, "templateloading");
                 //-----------------------
                 let p;
 
@@ -532,7 +529,7 @@
                 p = Promise.resolve(p);
                 //-----------------------
                 // 已取得資料
-                // debugger;
+
                 p.thenWith(function (data) {
                     // debugger;
                     if (typeof (data) != "string") {
@@ -544,9 +541,8 @@
 
                     this.$analyzeContent();
 
-                    if (this.$options["templateloaded"] != null) {
-                        this.$options["templateloaded"].call(this, this.$tempRootDom);
-                    }
+                    this.$call_hook(this.$tempRootDom, "templateloaded");
+
                     // 确定著色引擎
                     this.$setTemplateFn();
 
@@ -561,11 +557,11 @@
 
                     this.$error = err;
 
-                    if (this.$options["templateloaded"] != null) {
-                        this.$options["templateloaded"].call(this, this.$error);
-                    }
+                    this.$call_hook(this.$tempRootDom, "templateloaded");
+
                     this.$deferred.reject(this.$error);
                 }, this);
+
 
                 return p;
             };
@@ -668,6 +664,8 @@
         $.element = switchTemplateCommand;
 
         function switchTemplateCommand(dom, options) {
+            debugger;
+
             let switchTemplate;
 
             if (typeof (dom) == "string") {
@@ -757,6 +755,15 @@
                 let dataChange = this.$isDataChange(data);
 
                 return this.$checkUpdate(tmplName, dataChange);
+            };
+            //---------------------------------
+            this.unmount = function (dom) {
+
+                if (this.$template) {
+                    let template = this.$template;
+                    this.$template = undefined;
+                    template.unmount(dom);
+                }
             };
             //---------------------------------
             // 加入監聽，及時更新內容
@@ -960,7 +967,7 @@
                     //-----------------------
                     if (this.$templateChange) {
                         if (this.$parent.$template) {
-                            p = this.$parent.$template.unmount(dom, this.$data);
+                            this.$parent.$template.unmount(dom, this.$data);
                         }
 
                         p = p.doneWith(function () {
