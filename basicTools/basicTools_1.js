@@ -86,6 +86,7 @@
         //----------------------------
         if (_.waitJob == null) {
             _.mixin({
+                // 等待一個任務並設下時限
                 waitJob: function (job, timeLimit) {
                     let _res;
                     let _rej;
@@ -110,28 +111,24 @@
                         throw new TypeError("waitJob arg[0] must be promise or function return promise");
                     }
                     //-----------------------
-                    let p3 = new Promise(function (res, rej) {
-                        setTimeout(function () {
-                            rej(new Error('timeout'));
-                        }, timeLimit)
-                    });
 
-                    Promise.race([p2, p3]).then(function (data) {
+                    p2.then(function (data) {
                         _res(data);
                     }, function (err) {
                         _rej(err);
                     });
-                    //-----------------------
-                    p3.catch(function () {
 
-                    });
+                    setTimeout(function () {
+                        _rej(new Error('timeout'));
+                    }, timeLimit);
+                    //-----------------------
 
                     return p1;
                 }
             });
         }
         //----------------------------
-        if (typeof _.deferred === 'undefined') {
+        if (typeof _.promise === 'undefined') {
             _.mixin({
                 // 產生可以追蹤狀態的 promise
                 promise: function (callback, context) {
@@ -163,6 +160,67 @@
                     });
 
                     return p;
+                }
+            });
+        }
+        //----------------------------
+        if (typeof _.readFile == null) {
+            _.mixin({
+                readFile: function (path, code, timelimit) {
+
+                    code = code || 'utf-8';
+
+                    let fs;
+                    try {
+                        fs = require('fs');
+                    } catch (error) {
+                        throw new Error('readFile() no support in this sys');
+                    }
+                    //-----------------------
+                    let _res;
+                    let _rej;
+
+                    let p1 = new Promise(function (res, rej) {
+                        _res = res;
+                        _rej = rej;
+                    });
+                    //-----------------------
+                    let p = new Promise(function (res, rej) {
+                        fs.exists(path, function (data) {
+                            res(data);
+                        });
+                    });
+                    //-----------------------
+                    p = p.then(function (data) {
+                        let r;
+                        if (!data) {
+                            r = null;
+                        } else {
+                            r = new Promise(function (res, rej) {
+                                fs.readFile(path, code, function (err, data) {
+                                    if (err) {
+                                        rej(err);
+                                    } else {
+                                        res(data);
+                                    }
+                                });
+                            });
+                        }
+                        return r;
+                    });
+                    //-----------------------
+                    p.then(function (data) {
+                        _res(data);
+                    }, function (err) {
+                        _rej(err);
+                    });
+                    //-----------------------
+                    if (timelimit) {
+                        setTimeout(function () {
+                            _rej('timeout');
+                        }, timelimit);
+                    }
+                    return p1;
                 }
             });
         }
