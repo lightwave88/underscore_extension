@@ -7,7 +7,6 @@
             module.exports = function (obj) {
                 // 建構
                 factory_1(obj);
-                factory_2(obj);
             };
         } else {
             if (typeof (global._) === "undefined") {
@@ -16,7 +15,6 @@
             }
             // 建構
             factory_1(global._);
-            factory_2(global._);
         }
     }());
 
@@ -330,44 +328,5 @@
         }).call(Deferred.prototype);
     }
     //==========================================================================
-    function factory_2(_) {
-        if (typeof _.deferred === 'undefined') {
-            _.mixin({
-                // 產生可以追蹤狀態的 promise
-                promise: pp 
-            });
-        }
-
-        function pp(callback, context) {
-            let p;
-            if (callback instanceof Promise) {
-                p = Promise.resolve(callback);
-            } else if (typeof (callback) == "function") {
-                callback = (context === undefined ? callback : callback.bind(this));
-
-                p = new Promise(callback);
-            } else if (Array.isArray(callback)) {
-                callback = (context === undefined ? callback : callback.bind(this));
-
-                p = Promise.all(callback);
-            } else {
-                p = Promise.resolve(callback);
-            }
-            //-----------------------
-            if (p.__status == null) {
-                _.defineProperty(this._promise, '$status', 0, false);
-            }
-
-            p.then(function () {
-                p['$status'] = 1;
-            }, function (err) {
-                p['$status'] = 2;
-                err = (err instanceof Error) ? err : new Error(err);
-                throw err;
-            });
-
-            return p;
-        }
-
-    }
+   
 }(this || {}));
