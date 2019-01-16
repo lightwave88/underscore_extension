@@ -103,12 +103,12 @@
                         p2 = job();
 
                         if (!(p2 instanceof Promise)) {
-                            throw new TypeError("waitJob arg[0] must return promise");
+                            _rej("waitJob arg[0] must return promise");
                         }
                     } else if (job instanceof Promise) {
                         p2 = job;
                     } else {
-                        throw new TypeError("waitJob arg[0] must be promise or function return promise");
+                        _rej("waitJob arg[0] must be promise or function return promise");
                     }
                     //-----------------------
 
@@ -169,13 +169,6 @@
                 readFile: function (path, code, timelimit) {
 
                     code = code || 'utf-8';
-
-                    let fs;
-                    try {
-                        fs = require('fs');
-                    } catch (error) {
-                        throw new Error('readFile() no support in this sys');
-                    }
                     //-----------------------
                     let _res;
                     let _rej;
@@ -185,6 +178,13 @@
                         _rej = rej;
                     });
                     //-----------------------
+                    let fs;
+                    try {
+                        fs = require('fs');
+                    } catch (error) {
+                        _rej('readFile() no support in this sys');
+                    }
+
                     let p = new Promise(function (res, rej) {
                         fs.exists(path, function (data) {
                             res(data);
