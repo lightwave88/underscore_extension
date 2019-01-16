@@ -78,24 +78,6 @@
                     onRejected = onRejected.bind(context);
                 }
 
-                return this.then(onFulfilled, onRejected);
-            };
-        }
-        //----------------------------------------------------------------------
-        // promise.done()
-        if (typeof Promise.prototype.done === 'undefined') {
-            Promise.prototype.done = function (onFulfilled) {
-                return this.then(onFulfilled, undefined);
-            };
-        }
-        //----------------------------------------------------------------------
-        // promise.doneWith()
-        if (typeof Promise.prototype.doneWith === 'undefined') {
-            Promise.prototype.doneWith = function (onFulfilled, context) {
-                if (typeof onFulfilled === 'function') {
-                    onFulfilled = onFulfilled.bind(context);
-                }
-
                 return this.then(onFulfilled, null);
             };
         }
@@ -119,7 +101,7 @@
                 }
                 /*--------------------------*/
                 return this.then(function (data) {
-                    callback(null, data);
+                    callback(false, data);
                 }, function (error) {
                     callback(true, error);
                 });
@@ -141,7 +123,7 @@
                 callback = callback.bind(context);
 
                 return this.then(function (data) {
-                    callback(null, data);
+                    callback(false, data);
                 }, function (error) {
                     callback(true, error);
                 });
@@ -180,7 +162,9 @@
                 this._promise.then(function (data) {
                     $this._setStatus(1);
                     return data;
-                }, function (err) {
+                });
+                
+                this._promise.catch(function (err) {
                     $this._setStatus(2);
                 });
             };
@@ -218,34 +202,6 @@
 
                 p = p.then(this._getCallback(onFulfilled, context),
                     this._getErrorCallback(onRejected, context));
-                //-----------------------
-                p.then(function (data) {
-                    def.resolve(data);
-                }, function (error) {
-                    def.reject(error);
-                });
-                return def;
-            };
-            //------------------------------------------------------------------
-            this.done = function (onFulfilled) {
-                var def = Deferred();
-                var p = this.promise();
-
-                p = p.then(this._getCallback(onFulfilled), null);
-                //-----------------------
-                p.then(function (data) {
-                    def.resolve(data);
-                }, function (error) {
-                    def.reject(error);
-                });
-                return def;
-            };
-            //------------------------------------------------------------------
-            this.doneWith = function (onFulfilled, context) {
-                var def = Deferred();
-                var p = this.promise();
-
-                p = p.then(this._getCallback(onFulfilled, context), null);
                 //-----------------------
                 p.then(function (data) {
                     def.resolve(data);
@@ -378,37 +334,40 @@
         if (typeof _.deferred === 'undefined') {
             _.mixin({
                 // 產生可以追蹤狀態的 promise
-                promise: function (callback, context) {
-                    let p;
-                    if (callback instanceof Promise) {
-                        p = Promise.resolve(callback);
-                    } else if (typeof (callback) == "function") {
-                        callback = (context === undefined ? callback : callback.bind(this));
-
-                        p = new Promise(callback);
-                    } else if (Array.isArray(callback)) {
-                        callback = (context === undefined ? callback : callback.bind(this));
-
-                        p = Promise.all(callback);
-                    } else {
-                        p = Promise.resolve(callback);
-                    }
-                    //-----------------------
-                    if (p.__status == null) {
-                        _.defineProperty(this._promise, '__status', 0);
-                    }
-
-                    p.then(function () {
-                        p.__status = 1;
-                    }, function (err) {
-                        p.__status = 2;
-                        err = (err instanceof Error) ? err : new Error(err);
-                        throw err;
-                    });
-
-                    return p;
-                }
+                promise: pp 
             });
         }
+
+        function pp(callback, context) {
+            let p;
+            if (callback instanceof Promise) {
+                p = Promise.resolve(callback);
+            } else if (typeof (callback) == "function") {
+                callback = (context === undefined ? callback : callback.bind(this));
+
+                p = new Promise(callback);
+            } else if (Array.isArray(callback)) {
+                callback = (context === undefined ? callback : callback.bind(this));
+
+                p = Promise.all(callback);
+            } else {
+                p = Promise.resolve(callback);
+            }
+            //-----------------------
+            if (p.__status == null) {
+                _.defineProperty(this._promise, '$status', 0, false);
+            }
+
+            p.then(function () {
+                p['$status'] = 1;
+            }, function (err) {
+                p['$status'] = 2;
+                err = (err instanceof Error) ? err : new Error(err);
+                throw err;
+            });
+
+            return p;
+        }
+
     }
 }(this || {}));
