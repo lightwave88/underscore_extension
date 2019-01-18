@@ -1,4 +1,4 @@
-!(function () {
+!(function (global) {
     (function () {
         // debugger;
 
@@ -110,7 +110,7 @@
                         debugger;
                         clearTimeout(timehandle);
                         timehandle = undefined;
-                        def.reject(new Error('timeout'));
+                        def.reject('timeout');
                     }, timeLimit);
 
 
@@ -136,7 +136,7 @@
             });
         }
         //----------------------------
-        if (_.promise == null) {
+        if (typeof _.promise === 'undefined') {
             _.mixin({
                 // 產生可以追蹤狀態的 promise
                 promise: function (callback, context) {
@@ -175,4 +175,4 @@
 
     }
 
-})();
+})(this || {});
