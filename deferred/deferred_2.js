@@ -1,15 +1,15 @@
-!(function (global) {
+!(function(global) {
     // debugger;
 
-    (function () {
+    (function() {
         if (typeof module !== 'undefined' && module.exports) {
             // 指定 loadash|underscode 的 path
-            module.exports = function (obj) {
+            module.exports = function(obj) {
                 // 建構
                 factory_1(obj);
             };
         } else {
-            if (typeof (global._) === "undefined") {
+            if (typeof(global._) === "undefined") {
                 // worker 本體建構
                 return;
             }
@@ -29,9 +29,10 @@
         Object.defineProperty(obj, 'status', {
             enumerable: true,
             configurable: true,
-            get: function () {
+            get: function() {
                 return target.__status;
-            }, set: function () {
+            },
+            set: function() {
                 return;
             }
         });
@@ -63,7 +64,7 @@
 
         // promise.thenWith()
         if (typeof Promise.prototype.thenWith === 'undefined') {
-            Promise.prototype.thenWith = function (onFulfilled, onRejected, context) {
+            Promise.prototype.thenWith = function(onFulfilled, onRejected, context) {
 
                 if (typeof context !== 'object') {
                     context = null;
@@ -82,7 +83,7 @@
         //----------------------------------------------------------------------
         // promise.catchWith()
         if (typeof Promise.prototype.catchWith === 'undefined') {
-            Promise.prototype.catchWith = function (onRejected, context) {
+            Promise.prototype.catchWith = function(onRejected, context) {
                 if (typeof onRejected === 'function') {
                     onRejected = onRejected.bind(context);
                 }
@@ -93,14 +94,14 @@
         //----------------------------------------------------------------------
         // promise.always()
         if (typeof Promise.prototype.always === 'undefined') {
-            Promise.prototype.always = function (callback) {
+            Promise.prototype.always = function(callback) {
                 if (typeof callback !== 'function') {
                     throw new TypeError('arg must be function');
                 }
                 /*--------------------------*/
-                return this.then(function (data) {
+                return this.then(function(data) {
                     callback(false, data);
-                }, function (error) {
+                }, function(error) {
                     callback(true, error);
                 });
             };
@@ -108,7 +109,7 @@
         //----------------------------------------------------------------------
         // promise.alwaysWith()
         if (typeof Promise.prototype.alwaysWith === 'undefined') {
-            Promise.prototype.alwaysWith = function (callback, context) {
+            Promise.prototype.alwaysWith = function(callback, context) {
 
                 if (typeof context !== "object") {
                     context = null;
@@ -120,9 +121,9 @@
 
                 callback = callback.bind(context);
 
-                return this.then(function (data) {
+                return this.then(function(data) {
                     callback(false, data);
-                }, function (error) {
+                }, function(error) {
                     callback(true, error);
                 });
             };
@@ -145,11 +146,11 @@
         }
 
 
-        (function () {
-            this.__constructor = function () {
+        (function() {
+            this.__constructor = function() {
                 let $this = this;
 
-                this._promise = new Promise(function (resolve, reject) {
+                this._promise = new Promise(function(resolve, reject) {
                     $this._resolve = resolve;
                     $this._reject = reject;
                 });
@@ -157,102 +158,100 @@
 
                 setStatusGet(this);
 
-                this._promise.then(function (data) {
+                this._promise.then(function(data) {
                     $this._setStatus(1);
                     return data;
-                });
-                
-                this._promise.catch(function (err) {
+                }, function(err) {
                     $this._setStatus(2);
                 });
             };
             //------------------------------------------------------------------
-            this.promise = function () {
+            this.promise = function() {
                 return this._promise;
             };
             //------------------------------------------------------------------
-            this.resolve = function (arg) {
+            this.resolve = function(arg) {
                 this._resolve(arg);
             };
             //------------------------------------------------------------------
-            this.reject = function (err) {
+            this.reject = function(err) {
                 this._reject(err);
             };
             //------------------------------------------------------------------
-            this.then = function (onFulfilled, onRejected) {
+            this.then = function(onFulfilled, onRejected) {
                 var def = Deferred();
                 var p = this.promise();
 
                 p = p.then(this._getCallback(onFulfilled),
                     this._getErrorCallback(onRejected));
                 //-----------------------
-                p.then(function (data) {
+                p.then(function(data) {
                     def.resolve(data);
-                }, function (error) {
+                }, function(error) {
                     def.reject(error);
                 });
                 return def;
             };
             //------------------------------------------------------------------
-            this.thenWith = function (onFulfilled, onRejected, context) {
+            this.thenWith = function(onFulfilled, onRejected, context) {
                 var def = Deferred();
                 var p = this.promise();
 
                 p = p.then(this._getCallback(onFulfilled, context),
                     this._getErrorCallback(onRejected, context));
                 //-----------------------
-                p.then(function (data) {
+                p.then(function(data) {
                     def.resolve(data);
-                }, function (error) {
+                }, function(error) {
                     def.reject(error);
                 });
                 return def;
             };
             //------------------------------------------------------------------
-            this.catch = function (onRejected) {
+            this.catch = function(onRejected) {
                 var def = Deferred();
                 var p = this.promise();
 
                 p = p.catch(this._getErrorCallback(onRejected));
                 //-----------------------
-                p.then(function (data) {
+                p.then(function(data) {
                     def.resolve(data);
-                }, function (error) {
+                }, function(error) {
                     def.reject(error);
                 });
                 return def;
             };
             //------------------------------------------------------------------
-            this.catchWith = function (onRejected, context) {
+            this.catchWith = function(onRejected, context) {
                 var def = Deferred();
                 var p = this.promise();
 
                 p = p.catch(this._getErrorCallback(onRejected, context));
                 //-----------------------
-                p.then(function (data) {
+                p.then(function(data) {
                     def.resolve(data);
-                }, function (error) {
+                }, function(error) {
                     def.reject(error);
                 });
                 return def;
             };
             //------------------------------------------------------------------
-            this.always = function (callback) {
+            this.always = function(callback) {
                 var def = Deferred();
                 var p = this.promise();
 
                 p = p.then(this._getAlwaysCallback(callback, false),
                     this._getAlwaysCallback(callback, true));
                 //-----------------------
-                p.then(function (data) {
+                p.then(function(data) {
                     def.resolve(data);
-                }, function (error) {
+                }, function(error) {
                     def.reject(error);
                 });
                 return def;
             };
             //------------------------------------------------------------------
-            this.alwaysWith = function (callback, context) {
+            this.alwaysWith = function(callback, context) {
                 callback = callback.binf(context);
 
                 var def = Deferred();
@@ -261,27 +260,27 @@
                 p = p.then(this._getAlwaysCallback(callback, false, context),
                     this._getAlwaysCallback(callback, true, context));
                 /*--------------------------*/
-                p.then(function (data) {
+                p.then(function(data) {
                     def.resolve(data);
-                }, function (error) {
+                }, function(error) {
                     def.reject(error);
                 });
                 return def;
             };
             //------------------------------------------------------------------
-            this.isPending = function () {
+            this.isPending = function() {
                 return (this._promise.__status == 0);
             };
             //------------------------------------------------------------------
-            this.isFulfilled = function () {
+            this.isFulfilled = function() {
                 return (this._promise.__status == 1);
             };
             //------------------------------------------------------------------
-            this.isRejected = function () {
+            this.isRejected = function() {
                 return (this._promise.__status == 2);
             };
             //------------------------------------------------------------------
-            this._setStatus = function (status) {
+            this._setStatus = function(status) {
                 if (this._promise.status == null) {
                     _.defineProperty(this._promise, '__status', status);
                 } else {
@@ -289,38 +288,38 @@
                 }
             };
             //------------------------------------------------------------------
-            this._getCallback = function (callback, context) {
+            this._getCallback = function(callback, context) {
                 if (callback == null) {
                     return null;
                 }
 
                 callback = (context === undefined ? callback : callback.bind(context));
 
-                return function (d) {
+                return function(d) {
                     return callback(d);
                 };
             };
             //------------------------------------------------------------------
-            this._getErrorCallback = function (callback, context) {
+            this._getErrorCallback = function(callback, context) {
                 if (callback == null) {
                     return null;
                 }
 
                 callback = (context === undefined ? callback : callback.bind(context));
 
-                return function (err) {
+                return function(err) {
                     return callback(err);
                 };
             };
             //------------------------------------------------------------------
-            this._getAlwaysCallback = function (callback, args, context) {
+            this._getAlwaysCallback = function(callback, args, context) {
                 if (callback == null) {
                     return null;
                 }
 
                 callback = (context === undefined ? callback : callback.bind(context));
 
-                return function (d) {
+                return function(d) {
                     return callback(args, d);
                 };
             }
@@ -328,5 +327,5 @@
         }).call(Deferred.prototype);
     }
     //==========================================================================
-   
+
 }(this || {}));
