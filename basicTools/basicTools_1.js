@@ -136,7 +136,7 @@
             });
         }
         //----------------------------
-        if (typeof _.promise === 'undefined') {
+        if (_.promise == null) {
             _.mixin({
                 // 產生可以追蹤狀態的 promise
                 promise: function (callback, context) {
