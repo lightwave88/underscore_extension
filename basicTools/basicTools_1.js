@@ -1,4 +1,4 @@
-!(function (global) {
+!(function (_global) {
     (function () {
         // debugger;
 
@@ -9,7 +9,7 @@
                 factory(obj);
             };
         } else {
-            factory(global._);
+            factory(_global._);
         }
     }());
 
@@ -130,7 +130,6 @@
                         }
                     });
                     //-----------------------
-
                     return def.promise();
                 }
             });
@@ -144,27 +143,25 @@
                     if (callback instanceof Promise) {
                         p = Promise.resolve(callback);
                     } else if (typeof (callback) == "function") {
-                        callback = (context === undefined ? callback : callback.bind(this));
+                        callback = (context === undefined ? callback : callback.bind(context));
 
                         p = new Promise(callback);
                     } else if (Array.isArray(callback)) {
-                        callback = (context === undefined ? callback : callback.bind(this));
+                        callback = (context === undefined ? callback : callback.bind(context));
 
                         p = Promise.all(callback);
                     } else {
                         p = Promise.resolve(callback);
                     }
                     //-----------------------
-                    if (p.__status == null) {
-                        _.defineProperty(this._promise, '$status', 0, false);
+                    if (p['$status'] == null) {
+                        _.defineProperty(p, '$status', 0, false);
                     }
 
                     p.then(function () {
                         p['$status'] = 1;
                     }, function (err) {
                         p['$status'] = 2;
-                        err = (err instanceof Error) ? err : new Error(err);
-                        throw err;
                     });
 
                     return p;
