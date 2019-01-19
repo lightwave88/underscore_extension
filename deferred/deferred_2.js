@@ -30,15 +30,13 @@
             enumerable: true,
             configurable: true,
             get: function() {
-                return target.__status;
+                return target['$status'];
             },
             set: function() {
                 return;
             }
         });
     }
-
-
     //==========================================================================
     function factory_1(_) {
         if (typeof Promise !== 'function') {
@@ -77,7 +75,7 @@
                     onRejected = onRejected.bind(context);
                 }
 
-                return this.then(onFulfilled, null);
+                return this.then(onFulfilled, onRejected);
             };
         }
         //----------------------------------------------------------------------
@@ -145,15 +143,16 @@
             this.__constructor();
         }
 
-
         (function() {
             this.__constructor = function() {
                 let $this = this;
 
-                this._promise = new Promise(function(resolve, reject) {
-                    $this._resolve = resolve;
-                    $this._reject = reject;
-                });
+                this._promise = _.promise(function(resolve, reject) {
+                    debugger;
+                    this._resolve = resolve;
+                    this._reject = reject;
+                }, this);
+                
                 this._setStatus(0);
 
                 setStatusGet(this);
@@ -269,23 +268,19 @@
             };
             //------------------------------------------------------------------
             this.isPending = function() {
-                return (this._promise.__status == 0);
+                return (this._promise['$status'] == 0);
             };
             //------------------------------------------------------------------
             this.isFulfilled = function() {
-                return (this._promise.__status == 1);
+                return (this._promise['$status'] == 1);
             };
             //------------------------------------------------------------------
             this.isRejected = function() {
-                return (this._promise.__status == 2);
+                return (this._promise['$status'] == 2);
             };
             //------------------------------------------------------------------
-            this._setStatus = function(status) {
-                if (this._promise.status == null) {
-                    _.defineProperty(this._promise, '__status', status);
-                } else {
-                    this._promise.__status = status;
-                }
+            this._setStatus = function(status) {                
+                    this._promise['$status'] = status;                
             };
             //------------------------------------------------------------------
             this._getCallback = function(callback, context) {
