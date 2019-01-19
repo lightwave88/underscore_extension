@@ -274,13 +274,10 @@
             //------------------------------------------------------------------
             // CEO 請他接下一個任務
             this.getJob = function() {
-
-                let job = this.ceo.getJob();
-
                 this.check();
             };
             //------------------------------------------------------------------
-            this.doJob = function(){}
+            this.doJob = function(job){
 
                 if (this.timeHandle) {
                     // 若正在閒置中
@@ -327,7 +324,7 @@
                         this.idle();
                     }
                 }else{
-                    this.doJob();
+                    this.doJob(job);
                 }
             };
             //------------------------------------------------------------------
