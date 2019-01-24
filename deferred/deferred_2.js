@@ -1,6 +1,5 @@
 !(function(global) {
-    // debugger;
-
+    
     (function() {
         if (typeof module !== 'undefined' && module.exports) {
             // 指定 loadash|underscode 的 path
@@ -147,8 +146,7 @@
             this.__constructor = function() {
                 let $this = this;
 
-                this._promise = _.promise(function(resolve, reject) {
-                    debugger;
+                this._promise = _.promise(function(resolve, reject) {                    
                     this._resolve = resolve;
                     this._reject = reject;
                 }, this);
