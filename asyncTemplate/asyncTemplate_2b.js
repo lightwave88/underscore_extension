@@ -564,12 +564,12 @@
             this.$analyzeContent = function() {
                 // debugger;
 
-                let parent = document.createElement('div');
-                parent.innerHTML = this.$content;
+                this.$tempRootDom = document.createElement('div');
+                this.$tempRootDom.innerHTML = this.$content;
                 //-----------------------
 
-                let scriptList = Array.from(parent.querySelectorAll('script'));
-                let styleList = Array.from(parent.querySelectorAll('style'));
+                let scriptList = Array.from(this.$tempRootDom.querySelectorAll('script'));
+                let styleList = Array.from(this.$tempRootDom.querySelectorAll('style'));
                 //-----------------------
 
                 // 移除所有的 script
@@ -589,14 +589,6 @@
                     }
                     dom.parentNode.removeChild(dom);
                 }, this);
-                //-----------------------
-                // debugger;
-                // this.domList = parent;
-                let templateDom = parent.querySelector('template');
-
-                this.$tempRootDom = document.createElement('div');
-                this.$tempRootDom.innerHTML = (templateDom) ? templateDom.innerHTML : '';
-                parent = undefined
 
                 //-----------------------
                 // 匯入使用者设定
