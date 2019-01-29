@@ -218,14 +218,16 @@
             };
 
         }).call(SwitchTemplate.prototype);
-        //======================================================================
+        ////////////////////////////////////////////////////////////////////////
         // 任務: 處理 template, data
         // 是否要負責 render ??
         function SwitchJob(switchTemplate, templateName, data, fix_options) {
+            'use strict';
 
             this.$dom;
 
             this.$deferred;
+            this.$templateChange;
             //-----------------------
             this.$switchTemplate;
             this.$status = 0;
@@ -262,7 +264,7 @@
 
                 this.$switchTemplate = switchTemplate;
 
-                this.$dom = this.$parent.$dom;
+                this.$dom = this.$switchTemplate.$dom;
                 this.$data = data;
                 this.$templateName = templateName;
 
@@ -278,6 +280,7 @@
                     }
                 }
 
+                this.$isTemplateChange();
             };
             //---------------------------------
             this.stop = function () {
@@ -293,16 +296,7 @@
                 let p1 = this._aboutData();
 
                 // wait template
-                let p2 = _.asyncTemplate(this.$templateName).getClone();
-
-                p2.thenWith(function (err, tempClone) {
-                    debugger;
-                    this.$template = tempClone;
-                    tempClone.setContainer(this.$dom);
-                    tempClone.setUserOptions(this.$user_options);
-                    tempClone.setFixOptions(this.$fix_options);
-
-                }, this);
+                let p2 = this._aboutTemplate();
 
                 //-----------------------
                 let p3 = Promise.all([p1, p2]);
@@ -337,7 +331,7 @@
                     //-----------------------
                     let p = Promise.resolve();
 
-                    if (this.$isTemplateChange()) {
+                    if () {
                         // 更新 template, data
                         this.$switchTemplate.unmount();
 
@@ -388,6 +382,28 @@
                 return p;
             };
             //---------------------------------
+            this._aboutTemplate = function(){
+                let p = Promise.resolve();
+
+                if(this.$templateChange){
+                    this._call_hook('templateloading');
+
+                    p = _.asyncTemplate(this.$templateName).getClone();
+
+                    p.thenWith(function (err, tempClone) {
+                        debugger;
+                        this.$template = tempClone;
+                        tempClone.setContainer(this.$dom);
+                        tempClone.setUserOptions(this.$user_options);
+                        tempClone.setFixOptions(this.$fix_options);
+
+                        this._call_hook('templateloaded');
+                    }, this);
+                }
+
+                return p
+            };
+            //---------------------------------
             // 輸入的資料是否與之前有差異
             this.$isDataChange = function () {
 
@@ -395,21 +411,21 @@
                     return true;
                 }
 
-                let prev_data = this.$parent.$data;
+                let prev_data = this.$switchTemplate.$data;
                 return !_.isEqual(this.$data, prev_data);
             };
 
             //---------------------------------
             this.$isDataChange_1 = function () {
-                let prev_data = this.$parent.$data;
+                let prev_data = this.$switchTemplate.$data;
                 return !_.isEqual(this.$data, prev_data);
             }
             //---------------------------------
             this.$isTemplateChange = function () {
-                let prev_templateName = (this.$parent.$template == null ? '' : this.$parent.$template.getName());
+                let prev_templateName = (this.$switchTemplate.$template == null ? '' : this.$switchTemplate.$template.getName());
                 let new_templateName = this.$template.getName();
 
-                return (new_templateName.localeCompare(prev_templateName) != 0);
+                this.$templateCjange = (new_templateName.localeCompare(prev_templateName) != 0);
             };
 
             //---------------------------------
