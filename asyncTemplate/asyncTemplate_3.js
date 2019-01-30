@@ -579,7 +579,6 @@
 
                 this.$setTemplateFn();
                 //-----------------------
-
                 this.$render(dom, data);
 
                 // 確定操作的 dom                
@@ -596,7 +595,7 @@
                 let source = this.$templateItem;
 
                 let temp = _.asyncTemplate.hasMount(dom);
-                if (temp !== this) {
+                if (!this.isEqual(temp)) {
                     return;
                 }
 
@@ -608,6 +607,8 @@
 
                 this.$call_hook('beforeunmount');
 
+                dom.innerHTML = '';
+
                 debugger;
                 this.$removeStyle();
 
@@ -618,7 +619,7 @@
             this.updateData = function (dom, data) {
 
                 let temp = _.asyncTemplate.hasMount(dom);
-                if (temp !== this) {
+                if (!this.isEqual(temp)) {
                     return;
                 }
 
@@ -646,6 +647,14 @@
             // 所屬 template.name
             this.getTemplateName = function () {
                 return this.$templateItem.$name;
+            };
+            //------------------------------------------------
+            this.isEqual = function (obj) {
+                if (!(obj instanceof TemplateItemClone)) {
+                    return false;
+                }
+
+                return this.$style_id == obj.$style_id;
             };
             //------------------------------------------------
             // 插入 style
