@@ -1,4 +1,4 @@
-!(function(_global){
+!(function (_global) {
     // _.asyncTemplateCommand 設定文件
     const _asyncTemplateSetting = {
         // 给予 <style> 一个 id 值的标头
@@ -9,7 +9,7 @@
     const $templateSetting = {};
 
     // 是否支援字符串模版
-    const isSupport_literalsTemplate = (function() {
+    const isSupport_literalsTemplate = (function () {
         var support = false;
         try {
             var fn = new Function("return `support_templateString`;");
@@ -17,17 +17,17 @@
             if (fn() === "support_templateString") {
                 support = true;
             }
-        } catch (e) {} finally {
+        } catch (e) { } finally {
             return support;
         }
     })();
     //==========================================================================
 
-    (function() {
+    (function () {
 
-        if (typeof(module) == 'object' && module.exports) {
+        if (typeof (module) == 'object' && module.exports) {
             // 指定 loadash|underscode 的 path
-            module.exports = function(obj) {
+            module.exports = function (obj) {
                 // 建構
                 factory(global, obj);
             };
@@ -57,13 +57,13 @@
         }
 
         _.mixin({
-            asyncTemplate: function() {
+            asyncTemplate: function () {
                 throw new Error("this. enviroment no support _.async()");
             }
         });
     }
     //==========================================================================
-    function factory(_global, _){
+    function factory(_global, _) {
         _.mixin({
             asyncTemplate: asyncTemplateCommand
         });
@@ -97,25 +97,25 @@
             return instance;
         }
 
-        (function(fn) {
-            fn.keys = function() {
+        (function (fn) {
+            fn.keys = function () {
                 return Object.keys(TemplateItem.$templateItemMap);
             };
 
-            fn.values = function() {
+            fn.values = function () {
                 return Object.values(TemplateItem.$templateItemMap);
             };
 
-            fn.delete = function(name) {
+            fn.delete = function (name) {
                 delete TemplateItem.$templateItemMap[name];
             };
 
-            fn.clear = function() {
+            fn.clear = function () {
                 TemplateItem.$templateItemMap = {};
             };
 
             // 參數設定
-            fn.setting = function(key, value) {
+            fn.setting = function (key, value) {
                 if (key == null) {
                     return _asyncTemplateSetting;
                 } else if (value == null) {
@@ -123,6 +123,28 @@
                 }
                 _asyncTemplateSetting[k] = value;
             };
+
+            fn.hasMount = function (dom) {
+                let res = TemplateItem.$usedDom.has(dom) ? TemplateItem.$usedDom.get(dom) : null;
+                return res;
+            };
+
+            fn.updateData = function (dom, data) {
+                if (!TemplateItem.$usedDom.has(dom)) {
+                    return;
+                }
+                let temp = TemplateItem.$usedDom.get(dom);
+                temp.updateData(dom, data);
+            };
+
+            fn.unmount = function (dom) {
+                if (!TemplateItem.$usedDom.has(dom)) {
+                    return;
+                }
+                let temp = TemplateItem.$usedDom.get(dom);
+                temp.unmount(dom);
+            };
+
         })(asyncTemplateCommand);
         //======================================================================
 
@@ -157,6 +179,7 @@
                 mounted: null,
                 beforeunmount: null,
                 unmounted: null,
+                beforeupdate: null,
                 updated: null,
                 data: {}
             };
@@ -170,7 +193,7 @@
             // 針對 css 的垃圾回收
             // 當沒有 dom 引用此 template時
             // css 當移除
-            this.$usedDom = new Set();
+            this.$usedDom = TemplateItem.$usedDom;
 
             // getdata: 資料|取得資料的方式
             // literals: 是否採用 literals template 格式
@@ -205,7 +228,10 @@
 
         //--------------------------------------------------------------------------
         // 类别
-        (function(fn) {
+        (function (fn) {
+            fn.$usedDom = new Map();
+
+
             // 登陸所有的 TemplateItem
             fn.$templateItemMap = {};
 
@@ -223,8 +249,8 @@
         //--------------------------------------------------------------------------
 
 
-        (function(){
-            this.__construct = function(name, options) {
+        (function () {
+            this.__construct = function (name, options) {
 
                 this.$name = name;
                 this.$style_id = TemplateItem.$style_uid++;
@@ -243,12 +269,12 @@
 
             //------------------------------------------------
             // 使用者设定
-            this.setting = function(key, value) {
+            this.setting = function (key, value) {
                 debugger;
 
                 let options;
 
-                if (typeof(key) == "object") {
+                if (typeof (key) == "object") {
                     options = key;
                 } else {
                     options = {
@@ -279,10 +305,9 @@
                 }
             };
             //------------------------------------------------
-
             // 最主要的 API
             // 取得副本
-            this.getClone = function(){
+            this.promise = function () {
 
                 let def = _.deferred();
 
@@ -292,27 +317,22 @@
 
                 let p = this.$deferred.promise();
 
-                p.thenWith(function(){
+                p.thenWith(function () {
                     debugger;
-                    let templateClone = TemplateItemClone(this);
+                    let templateClone = new TemplateItemClone(this);
                     // 傳送資料
                     def.resolve(templateClone);
-                }, function(){
+                }, function () {
                     def.reject(this.$error);
-                },this)
+                }, this)
 
 
                 return def.promise();
             };
             //------------------------------------------------
-
-            this.getData = function(){
-
-            };
-            //------------------------------------------------
             // 取得 模版 的內容
             // 最主要非同步的步驟
-            this.$asyncGetTemplate = function() {
+            this.$asyncGetTemplate = function () {
                 // debugger;
 
                 this.$call_hook(null, "templateloading");
@@ -326,16 +346,16 @@
                         dataType: 'html'
                     }, this.$options.ajax);
 
-                    p = new Promise(function(res, rej) {
+                    p = new Promise(function (res, rej) {
                         $.ajax(options)
-                            .done(function(data) {
+                            .done(function (data) {
                                 res(data);
                             })
-                            .fail(function(err) {
+                            .fail(function (err) {
                                 rej(err);
                             });
                     });
-                } else if (typeof(this.$options.getdata) == "function") {
+                } else if (typeof (this.$options.getdata) == "function") {
                     p = this.$options.getdata();
                 } else if (this.$options.getdata instanceof Promise) {
                     p = this.$options.getdata;
@@ -347,9 +367,9 @@
                 //-----------------------
                 // 已取得資料
 
-                p.thenWith(function(data) {
+                p.thenWith(function (data) {
                     // debugger;
-                    if (typeof(data) != "string") {
+                    if (typeof (data) != "string") {
                         throw new TypeError("asyncTemplate data must be string");
                     }
                     this.$htmlContent = data;
@@ -361,7 +381,7 @@
                     this.$call_hook(this.$tempRootDom, "templateloaded");
 
                     this.$deferred.resolve(this);
-                }, function(err) {
+                }, function (err) {
                     // debugger;
                     this.$status = 2;
 
@@ -378,18 +398,18 @@
                 return p;
             };
             //------------------------------------------------
-            this.$call_hook = function(dom, callbackName) {
+            this.$call_hook = function (dom, callbackName) {
 
                 let fn = this.$options[callbackName];
 
-                if (typeof(fn) == "function") {
+                if (typeof (fn) == "function") {
                     fn.call(this, this.$error, dom);
                 }
             };
             //------------------------------------------------
             // 從 url 取得的內容解析
             // 取得 htmlContent, script, style
-            this.$analyzeContent = function() {
+            this.$analyzeContent = function () {
                 debugger;
 
                 let dom = document.createElement('div');
@@ -401,7 +421,7 @@
                 //-----------------------
 
                 // 移除所有的 script
-                scriptList.forEach(function(dom, i) {
+                scriptList.forEach(function (dom, i) {
                     if (i == 0) {
                         this.$javascriptContent = dom.innerHTML || '';
                         this.$javascriptContent = this.$javascriptContent.trim();
@@ -410,7 +430,7 @@
                 }, this);
                 //-----------------------
                 // 移除所有的 style
-                styleList.forEach(function(dom, i) {
+                styleList.forEach(function (dom, i) {
                     if (i == 0) {
                         this.$cssContent = dom.innerHTML || '';
                         this.$cssContent = this.$cssContent.trim();
@@ -430,7 +450,7 @@
 
             //------------------------------------------------
             // 從 script 內容取得 templateOptions
-            this.$importTemplateOptionsFromScript = function() {
+            this.$importTemplateOptionsFromScript = function () {
 
                 let res;
                 if (this.$javascriptContent != null && this.$javascriptContent.length > 0) {
@@ -466,7 +486,7 @@
         }).call(TemplateItem.prototype)
         ////////////////////////////////////////////////////////////////////////
         // TemplateItem 的副本
-        function TemplateItemClone(templateItem){
+        function TemplateItemClone(templateItem) {
             'use strict';
 
             // TemplateItem
@@ -479,9 +499,9 @@
 
             this.$tempRootDom;
             //-----------------------
-            this.$fix_options = {};
+            this.$fix_options;
 
-            this.$user_options = {};
+            this.$user_options;
 
             this.$template_options = {};
             //-----------------------
@@ -498,8 +518,10 @@
             this.__construct(templateItem);
         }
 
-        (function(){
-            this.__construct = function(templateItem){
+        (function () {
+            this.__construct = function (templateItem) {
+                debugger;
+
                 this.$templateItem = templateItem;
 
                 this.$tempRootDom = document.createElement('div');
@@ -508,120 +530,130 @@
                 this.$operateDom = this.$tempRootDom;
 
                 this.$cloneSource();
-
-                // 產生 $templateFn
-                this.$setTemplateFn();
             };
             //------------------------------------------------
             // callby SwitchJob
-            this.setContainer = function(dom){
+            this.setContainer = function (dom) {
                 this.$containerDom = dom;
             };
             //------------------------------------------------
             // callby SwitchJob
-            this.setFixOptions = function(options){
-                _.extend(this.$fix_options, options);
+            this.$setFixOptions = function (options) {
+                this.$fix_options = _.extend({}, options);
             };
 
             // callby SwitchJob
-            this.setUserOptions = function(options){
-                _.extend(this.$user_options, options);
+            this.$setUserOptions = function (options) {
+                this.$user_options = _.extend({}, options);
             };
             //------------------------------------------------
-            this.addError = function(key, error){
+            this.addError = function (key, error) {
 
-                if(this.$error == null){
+                if (this.$error == null) {
                     this.$error = {};
                 }
 
                 this.$error[key] = error;
             };
             //------------------------------------------------
-            this.mount = function(data, dom){
+            this.mount = function (dom, data, fix_options, user_options) {
 
-                if(dom){
-                    if(this.$containerDom.isEqualNode(dom)){
-                        throw new Error('dom has mount before');
-                    }else{
-                        this.setContainer(dom);
-                    }
+
+                if (_.asyncTemplate.hasMount(dom)) {
+                    // 已有掛上 template
+                    return false;
                 }
 
-                if($this.$hasMounted()){
-                    throw new Error('dom has mounted template');
-                }
+                this.$setFixOptions(fix_options);
+                this.$setUserOptions(user_options);
                 //-----------------------
                 let source = this.$templateItem;
 
-                // 登錄
-                source.$usedDom.add(dom);
+                debugger;
+                this.$insertStyle(dom);
+                //-----------------------
+                this.$operateDom = this.$tempRootDom.cloneNode(true);
 
-                this.$call_hook['beforemount'];
+                this.$call_hook('beforemount');
+                debugger;
 
-                // 確定操作的 dom
-                this.$operateDom = this.$containerDom;
+                this.$setTemplateFn();
+                //-----------------------
 
-                this.$render(data);
+                this.$render(dom, data);
 
-                this.$call_hook(dom, 'mounted');
+                // 確定操作的 dom                
+                this.$operateDom = dom;
 
-                this.$call_hook(dom, 'updated');
+                this.$call_hook('mounted');
+
+                return true;
             };
             //------------------------------------------------
-            this.unmount = function(dom){
-
-                if(dom && !this.$containerDom.isEqualNode(dom)){
-                    throw new Error('dom has not mount template before');
-                }
+            // 古怪的 API
+            this.unmount = function (dom) {
 
                 let source = this.$templateItem;
 
-                if(!$this.$hasMounted()){
-                    throw new Error('dom has not mount template');
+                let temp = _.asyncTemplate.hasMount(dom);
+                if (temp !== this) {
+                    return;
                 }
+
+                // this.$setFixOptions(fix_options);
+                // this.$setUserOptions(user_options);
+                //-----------------------
 
                 source.$usedDom.delete(dom);
 
                 this.$call_hook('beforeunmount');
 
+                debugger;
                 this.$removeStyle();
 
                 this.$call_hook('unmounted');
             };
             //------------------------------------------------
-            this.updateData = function(data, dom){
+            // 古怪的 API
+            this.updateData = function (dom, data) {
 
-                if(dom && !this.$containerDom.isEqualNode(dom)){
-                    throw new Error('dom has not mount template before');
+                let temp = _.asyncTemplate.hasMount(dom);
+                if (temp !== this) {
+                    return;
                 }
 
-                if(!$this.$hasMounted()){
-                    throw new Error('dom has not mount template');
-                }
+                // this.$setFixOptions(fix_options);
+                // this.$setUserOptions(user_options);
+                //-----------------------
+                this.$operateDom = this.$tempRootDom.cloneNode(true);
 
-                this.$render(data);
+                this.$call_hook('beforeupdate');
 
-                this.$call_hook(dom, 'updated');
+                this.$setTemplateFn();
+                //-----------------------
+                this.$render(dom, data);
+
+                // 確定操作的 dom                
+                this.$operateDom = dom;
+
+                this.$call_hook('updated');
             };
             //------------------------------------------------
-            this.call_hook = function(hookName){
+            this.call_hook = function (hookName) {
                 this.$call_hook(hookName);
             };
             //------------------------------------------------
             // 所屬 template.name
-            this.getTemplateName = function(){
+            this.getTemplateName = function () {
                 return this.$templateItem.$name;
             };
             //------------------------------------------------
-
-            // 是否已掛載此 dom 上
-            this.$hasMounted = function(){
-                return this.$templateItem.$usedDom.has(this.$containerDom);
-            };
-            //------------------------------------------------
             // 插入 style
-            this.$insertStyle = function() {
-                let dom = this.$containerDom;                                
+            this.$insertStyle = function (dom) {
+                let source = this.$templateItem;
+
+                // 登錄
+                source.$usedDom.set(dom, this);
 
                 if (this.$cssContent == null || this.$cssContent.length < 1) {
                     return;
@@ -639,57 +671,61 @@
                 document.head.appendChild(styleDom);
             };
             //------------------------------------------------
-            this.$removeStyle = function(){
+            this.$removeStyle = function () {
                 let source = this.$templateItem;
 
-                if(source.$usedDom.size){
+                if (source.$usedDom.size) {
                     return;
                 }
 
                 let styleDom = this.$checkCss();
-                if(styleDom == null){
+                if (styleDom == null) {
                     return;
                 }
 
                 document.head.removeChild(styleDom);
             };
+            //------------------------------------------------
+            this.$checkCss = function () {
+                let source = this.$templateItem;
 
-            this.$checkCss = function(){
                 let id = _asyncTemplateSetting["styleId_head"] + source.$style_id;
                 let styleDom = document.querySelector(("#" + id));
                 return (styleDom || null);
             };
             //------------------------------------------------
 
-            this.$call_hook = function(hookName){
+            this.$call_hook = function (hookName) {
+                debugger;
+
                 let fn = this.$template_options[hookName];
                 let dom = this.$operateDom;
 
-                if(typeof(fn) == 'function'){
+                if (typeof (fn) == 'function') {
                     fn.call(dom, this.$error, dom);
                 }
                 //------------------
                 fn = this.$user_options[hookName];
 
-                if(typeof(fn) == 'function'){
+                if (typeof (fn) == 'function') {
                     fn.call(dom, this.$error, dom);
                 }
                 //------------------
                 fn = this.$fix_options[hookName];
 
-                if(typeof(fn) == 'function'){
+                if (typeof (fn) == 'function') {
                     fn.call(dom, this.$error, dom);
                 }
             };
             //------------------------------------------------
-            this.$cloneSource = function(){
+            this.$cloneSource = function () {
 
                 const source = this.$templateItem;
 
                 _.extend(this.$template_defaultData, source.$template_options.data);
-                delete source.$template_options.data;
 
-                 _.extend(this.$template_options, source.$template_options);
+                _.extend(this.$template_options, source.$template_options);
+                delete this.$template_options.data;
 
                 this.$name = source.$name;
 
@@ -697,39 +733,38 @@
             };
 
             //------------------------------------------------
-            this.$render = function(data){
+            this.$render = function (dom, data) {
                 debugger;
 
-                if (typeof(data) != "object" || data == null) {
+                if (typeof (data) != "object" || data == null) {
                     data = {};
                 }
-
                 //-----------------------
-                this.$insertStyle();
+
                 data = _.extend({}, this.$template_options.data, data);
 
                 let htmlContent = this.$templateFn(data);
+                debugger;
 
-                this.$containerDom.innerHTML = htmlContent;
+                dom.innerHTML = htmlContent;
             };
             //-----------------------------------------------
 
             // 产生 template 函式
-            this.$setTemplateFn = function() {
+            this.$setTemplateFn = function () {
+                let source = this.$templateItem;
 
-                if(this.$templateFn == null){
-                    return;
-                }
+                let htmlContent = this.$operateDom.innerHTML;
+                let options = source.$options;
 
-                let htmlContent = this.$tempRootDom.innerHTML;
-                let options = this.$options;
+                let render = options.render;
 
-                if (options.render) {
+                if (typeof (render) == "function") {
                     // 若有指派著色引擎
 
-                    this.$templateFn = (function(html, data) {
-                        this.$options.render(html, data);
-                    }).bind(this, htmlContent);
+                    this.$templateFn = (function (render, html, data) {
+                        render(html, data);
+                    }).bind(this, render, htmlContent);
 
                 } else if (options.literals) {
                     // 采用 es6
@@ -745,7 +780,7 @@
         }).call(TemplateItemClone.prototype);
         //======================================================================
 
-    }
+    } // end factory
 
 
 })(this || {});
