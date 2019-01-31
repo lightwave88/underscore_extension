@@ -102,8 +102,8 @@
                 return Object.keys(TemplateItem.$templateItemMap);
             };
             //--------------------------------------
-            fn.has = function() {
-                return ((TemplateItem.$templateItemMap == null) ? false : true);
+            fn.has = function(tempName) {
+                return ((TemplateItem.$templateItemMap[tempName] == null) ? false : true);
             };
             //--------------------------------------
             fn.values = function() {
@@ -165,12 +165,25 @@
             // 是否發生錯誤
             fn.error = function(tempName) {
 
+                let templateitem = TemplateItem.$templateItemMap[tempName];
+                if(templateitem == null){
+                    throw new Error('tempale no exists');
+                }
+
+                return (templateitem.$status == 2);
             };
+            //--------------------------------------
             // 是否已經 loaded
             fn.loaded = function(tempName) {
 
-            };
+                let templateitem = TemplateItem.$templateItemMap[tempName];
+                if(templateitem == null){
+                    throw new Error('tempale no exists');
+                }
 
+                return (templateitem.$status > 0);
+            };
+            //--------------------------------------
             // 某個 dom 是否已掛上 template
             fn.hasMount = function(dom) {
                 let res = TemplateItem.$usedDom.has(dom) ? TemplateItem.$usedDom.get(dom) : null;
