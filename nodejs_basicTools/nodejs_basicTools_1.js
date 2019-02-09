@@ -22,8 +22,9 @@
                     let p = args[args.length - 1];
 
                     p = (p instanceof Promise) ? p : (Promise.resolve());
-
-                    code = code || 'utf-8';
+                    //------------------
+                    path = (path instanceof Promise) ? null : path;
+                    code = (code instanceof Promise) ? null : code;
                     //------------------
                     let fs;
 
@@ -31,11 +32,10 @@
                         // 讀檔
                         let r;
 
-                        data = (Array.isArray(data)) ? data : [];
-
-                        path = data[0] || path;
-                        cpde = data[1] || code;
-
+                        if (Array.isArray(data)) {
+                            path = (data[0] == null) ? path : data[0];
+                            code = (data[1] == null) ? code : data[1];
+                        }
 
                         return new Promise(function (res, rej) {
                             fs = require('fs');
@@ -61,29 +61,33 @@
                 isFile: function (path) {
                     let args = Array.from(arguments);
                     let p = args[args.length - 1];
-
                     p = (p instanceof Promise) ? p : (Promise.resolve());
+                    //------------------
+                    path = (path instanceof Promise) ? null : path;
                     //------------------
                     let fs;
                     p = p.then(function (data) {
+                        debugger;
 
-                        path = (typeof (data) == "string") ? data : path;
+                        if (Array.isArray(data) && data[0] != null) {
+                            path = data[0];
+                        }
 
                         return new Promise(function (res, rej) {
-                            debugger;
+                            // debugger;
                             fs = require('fs');
 
-                            if (data != null) {
-                                path = data;
-                            }
                             // 找尋檔案
                             fs.stat(path, function (err, data) {
                                 // debugger;
                                 if (err) {
                                     rej(err);
                                 } else {
-                                    let r = (data.isFile()) ? true : false;
-                                    res(r);
+                                    if (data.isFile()) {
+                                        res(true)
+                                    } else {
+                                        rej('not file')
+                                    }
                                 }
                             });
                         });
@@ -98,109 +102,154 @@
             _.mixin({
                 // 可在參數最後面串接 promise
                 pipeReadStream: function pipeReadStream(path, reader, readSize, code) {
+                    debugger;
 
                     let def = _.deferred();
+                    let p1 = def.promise();
 
                     let args = Array.from(arguments);
                     let p = args[args.length - 1];
-
                     p = (p instanceof Promise) ? p : (Promise.resolve());
+                    //----------------------------
+                    path = (path instanceof Promise) ? null : path;
+                    reader = (reader instanceof Promise) ? null : reader;
+                    readSize = (readSize instanceof Promise) ? null : readSize;
+                    code = (code instanceof Promise) ? null : code;
+                    //----------------------------
+                    let source;
+                    let buffer = [];
+                    let pause = false;
+                    const fs = require('fs');
+                    //----------------------------
 
+                    p.then(function (data) {
+                        debugger;
+                        // 主要任務
 
-                    p.then(function () {
-                        let source;
+                        if (Array.isArray(data)) {
+                            path = (data[0] == null) ? path : data[0];
+                            reader = (data[1] == null) ? reader : data[1];
+                            readSize = (data[2]) ? readSize : data[2];
+                            code = (data[3]) ? code : data[3];
+                        }
                         try {
-                            source = fs.createReadStream(path);
-
-                            if (code) {
-                                source.setEncoding(code);
-                            }
+                            readStrean();
                         } catch (error) {
-
                             def.reject(error);
-
                             return;
                         }
-                        //----------------------------
-                        let buffer = [];
-                        let pause = false;
+                        // debugger;
 
-                        source.on('readable', function () {
+                        // 綁定事件
+                        bindEvent();
 
-                            console.log('readable....');
+                    }, function (err) {
+                        debugger;
 
-                            let chunk;
-                            //-----------------------
+                        def.reject();
+                    });
 
-                            while (null !== (chunk = source.read(1024))) {
-                                console.log('得到了 %d 位元組的資料準備寫入', chunk.length);
+                    return p1;
+                    //----------------------------
+                    function readStrean() {
+                        source = fs.createReadStream(path);
 
-                                if (buffer.length) {
-                                    console.log('想寫入, 但 buffer 未空')
-                                    buffer.push(chunk);
-                                } else if (pause) {
-                                    console.log('被輸入勒令暫停過, 寫入 buffer')
-                                    buffer.push(chunk);
-                                } else {
+                        if (code) {
+                            source.setEncoding(code);
+                        }
+                    }
+                    //----------------------------
+                    function bindEvent() {
+                        source.on('readable', e_readableJob);
 
-                                    console.log('寫入')
-                                    // 嘗試寫入
-                                    if ((reader.write(chunk)) == false) {
-                                        // 寫入已滿
-                                        console.log('寫入已滿，暫停')
-                                        source.pause();
-                                        pause = true;
-                                    }
-                                }
-                            }
-                        });
-                        //-----------------------
-                        reader.on('drain', function () {
-                            console.log('drain');
+                        reader.on('drain', e_drainJob);
 
-                            if (!writeBuffer()) {
-                                // buffer 寫入時發生了寫入滿溢
-                                // 暫時不要喚醒 source
-                                console.log('buffer 寫入時發生了寫入滿溢');
-                                return;
-                            }
-
-                            if (source.readable && source.resume) {
-                                console.log('恢復輸出')
-                                pause = false;
-                                source.resume();
-                            }
-                        });
-                        //-----------------------
                         source.once('error', function () {
                             def.reject();
                         });
 
-                        //-----------------------
-                        source.once('end', function () {
-                            def.resolve();
+                        source.once('close', function () {
+                            checkEnd();
                         });
+                    }
+                    //----------------------------
+                    function e_readableJob() {
+                        console.log('readable....');
 
+                        let chunk;
                         //-----------------------
-                        function writeBuffer() {
-                            let chunk;
-                            while (buffer.length) {
-                                console.log('proxy寫入');
-                                chunk = buffer[0]
-                                buffer.shift();
+                        while (null !== (chunk = source.read(readSize))) {
+                            console.log('得到了 %d 位元組的資料準備寫入', chunk.length);
 
-                                if (false == reader.write(chunk)) {
-                                    console.log('proxy寫入太滿');
-                                    return false;
+                            if (buffer.length) {
+                                console.log('想寫入, 但 buffer 未空')
+                                buffer.push(chunk);
+                            } else if (pause) {
+                                console.log('被輸入勒令暫停過, 寫入 buffer')
+                                buffer.push(chunk);
+                            } else {
+
+                                console.log('寫入')
+                                // 嘗試寫入
+                                if ((reader.write(chunk)) == false) {
+                                    // 寫入已滿
+                                    console.log('寫入已滿，暫停')
+                                    source.pause();
+                                    pause = true;
                                 }
                             }
-
-                            return true;
                         }
-                    });
+                    }
+                    //----------------------------
+                    // 當讀取空出來
+                    function e_drainJob() {
+                        console.log('drain');
 
-                    return def.promise();
-                }
+                        if (!writeBuffer()) {
+                            // buffer 寫入時發生了寫入滿溢
+                            // 暫時不要喚醒 source
+                            console.log('buffer 寫入時發生了寫入滿溢');
+                            return;
+                        }
+
+                        if (source.readable && source.resume) {
+                            console.log('恢復輸出')
+                            pause = false;
+                            source.resume();
+                        }
+                    }
+                    //----------------------------
+                    // 把自定義的 buffer
+                    function writeBuffer() {
+
+                        while (buffer.length > 0) {
+                            let chunk = buffer.shift();
+                            
+                            console.log('proxy寫入(%s)', chunk.length);
+
+                            if (false == reader.write(chunk)) {
+                                console.log('proxy寫入太滿');
+                                return false;
+                            }
+                        }
+                        return true;
+                    }
+                    //----------------------------
+                    function checkEnd() {
+                        if (buffer.length > 0) {
+                            console.log('傳送結束，但 buffer 尚未清空(%d)', buffer.length);
+                            setImmediate(checkEnd);
+                        } else {
+
+                            reader.removeListener('drain', e_drainJob);
+                            source.removeListener('readable', e_readableJob);
+                            source = null;
+
+                            def.resolve();
+                        }
+                    }
+                    //----------------------------
+                } // end pipeReadStream
             });
         }
         //----------------------------
