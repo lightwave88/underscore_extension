@@ -101,7 +101,7 @@
         if (_.pipeReadStream == null) {
             _.mixin({
                 // 可在參數最後面串接 promise
-                pipeReadStream: function pipeReadStream(path, reader, readSize, code) {
+                readStreamPipe: function pipeReadStream(path, reader, readSize, code) {
                     debugger;
 
                     let def = _.deferred();
