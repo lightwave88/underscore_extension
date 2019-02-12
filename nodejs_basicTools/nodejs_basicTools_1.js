@@ -98,10 +98,10 @@
             });
         }
         //----------------------------
-        if (_.pipeReadStream == null) {
+        if (_.readStreamPipe == null) {
             _.mixin({
                 // 可在參數最後面串接 promise
-                readStreamPipe: function pipeReadStream(path, reader, readSize, code) {
+                readStreamPipe: function readStreamPipe(path, reader, readSize, code) {
                     debugger;
 
                     let def = _.deferred();
