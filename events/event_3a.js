@@ -80,6 +80,9 @@
         // 取得 extention 全域變數
         const $extension = _.$$extension;
 
+        // 全局事件
+        let $bus;
+
         //----------------------------------------------------------------------
         _.mixin({
             // API
@@ -88,11 +91,11 @@
             // 不然就直接覆蓋在物件身上
             // prefix: 避免撞名，在命令前加一個符號
             // obj 不能是 dom
-            event: EventCommand
+            event: eventCommand
         });
 
 
-        function EventCommand(obj, noProto, prefix) {
+        function eventCommand(obj, noProto, prefix) {
             // debugger;
             let args = Array.from(arguments);
 
@@ -115,11 +118,12 @@
             //------------------
             // 是否要将 API 置放在原型炼中
             let assignObj = obj;
-            if (!noProto && supportProto) {
+            if (noProto && supportProto) {
                 let proto = Object.getPrototypeOf(obj);
                 // 創建一個繼承 proto 的物件
                 assignObj = Object.create(proto);
-                obj.__proto__ = assignObj;
+
+                Object.setPrototypeOf(obj, assignObj);
             }
             //------------------
             // 檢查是否有 key 撞到
@@ -222,15 +226,25 @@
                 return fn;
             };
             //------------------------------------------------------------------
-            fn.trigger = function (obj, eventName) {
+            fn.trigger = function (obj, eventName, data) {
                 Tool.checkInitialized(obj);
+                console.log(data);
 
-                let args = Array.from(arguments);
-                args = args.splice(2);
-
-                __trigger.call(obj, eventName, args);
+                __trigger.call(obj, eventName, data);
 
                 return fn;
+            };
+            //------------------------------------------------------------------
+            // 取得全局 event 對象
+            fn.bus = function(){
+                if($bus == null){
+                    $bus = _.event({}, true);
+                }
+                return $bus;
+            };
+            //------------------------------------------------------------------
+            fn.deleteBus = function(){
+                $bus = undefined;
             };
             //------------------------------------------------------------------
             fn.bind = fn.on;
@@ -240,7 +254,7 @@
             fn.emit = fn.trigger;
 
             fn.hasBind = fn.hasOn;
-        })(EventCommand);
+        })(eventCommand);
 
 
         //----------------------------------------------------------------------
@@ -317,14 +331,11 @@
             //------------------------------------------------------------------
             // 要排除 trigger 的物件
             // name, option. arguments
-            _self.trigger = function (eventName) {
+            _self.trigger = function (eventName, data) {
                 'use strict';
                 // debugger;
 
-                let args = Array.from(arguments);
-                args = args.splice(1);
-
-                __trigger.call(this, eventName, args);
+                __trigger.call(this, eventName, data);
 
                 return this;
             };
@@ -340,12 +351,8 @@
         //======================================================================
         // 設置本身的監聽
         function __on(name, callback, context, once) {
-
-            if (Tool.isDom(this)) {
-                throw new Error('use dom event method');
-            }
-
             // debugger;
+
             let self = this;
 
             let eventData = this["__$$us_eventData"];
@@ -353,8 +360,8 @@
             let events = eventData.events;
             //----------------------------
             // 為 callback 放個 id
-            if (typeof callback["__$$us_eventGuid"] !== 'number') {
-                _.defineProperty(callback, "__$$us_eventGuid", $extension.callback_guid++, false);
+            if (typeof callback["__$$us_callbackGuid"] !== 'number') {
+                _.defineProperty(callback, "__$$us_callbackGuid", $extension.callback_guid++, false);
             }
 
             //----------------------------
@@ -365,7 +372,10 @@
                 let name = names[i];
 
                 if (events[name] == null) {
-                    events[name] = [];                    
+                    events[name] = [];
+                    if (Tool.isDom(this)) {
+                        Tool.bindDomEvent(this, name);
+                    }
                 }
                 let eventList = events[name];
 
@@ -434,8 +444,8 @@
             debugger;
             let events = target_eventData.events;
 
-            if (typeof callback.__$$us_eventGuid !== 'number') {
-                _.defineProperty(callback, "__$$us_eventGuid", $extension.callback_guid++, false);
+            if (typeof callback.__$$us_callbackGuid !== 'number') {
+                _.defineProperty(callback, "__$$us_callbackGuid", $extension.callback_guid++, false);
             }
             //----------------------------
             let names = name.split(eventSetting.eventSplitter);
@@ -447,7 +457,7 @@
                     events[name] = [];
 
                     if (Tool.isDom(eventMaker)) {
-                        Tool.bindDomEvent(eventMaker, name, Tool.event_dispatcher);
+                        Tool.bindDomEvent(eventMaker, name);
                     }
                 }
                 let eventList = events[name];
@@ -490,7 +500,7 @@
                 }
             }
             //-----------------------
-            if (callback["__$$us_eventGuid"] == null) {
+            if (callback["__$$us_callbackGuid"] == null) {
                 // 若 callback 沒設定過標記
                 return false;
             }
@@ -499,7 +509,7 @@
 
             return eventList.some(function (handle) {
                 // callback 是否匹配
-                let judge_1 = (callback["__$$us_eventGuid"] === handle.callback["__$$us_eventGuid"]);
+                let judge_1 = (callback["__$$us_callbackGuid"] === handle.callback["__$$us_callbackGuid"]);
 
                 // 監聽者是否匹配
                 let judge_2 = (handle.listener["__$$us_eventData"]["id"] === self_id);
@@ -568,7 +578,7 @@
                         return false;
                     }
 
-                    if (callback["__$$us_eventGuid"] == null) {
+                    if (callback["__$$us_callbackGuid"] == null) {
                         // 若 callback 沒設定過標記
                         return false;
                     }
@@ -576,7 +586,7 @@
                     let eventList = events[name];
 
                     return eventList.some(function (handle) {
-                        let judge_1 = (callback["__$$us_eventGuid"] == handle.callback["__$$us_eventGuid"]);
+                        let judge_1 = (callback["__$$us_callbackGuid"] == handle.callback["__$$us_callbackGuid"]);
 
                         let judge_2 = (handle.listener["__$$us_eventData"]["id"] == self_id);
 
@@ -589,13 +599,9 @@
             return res;
         }
         //----------------------------------------------------------------------
-        function __off(name, callback) {
-            
-            if (Tool.isDom(this)) {
-                throw new Error('use dom event method');
-            }
+        function __off(name, callback) {           
 
-            if (callback != null && callback["__$$us_eventGuid"] == null) {
+            if (callback != null && callback["__$$us_callbackGuid"] == null) {
                 // callback 未註冊過
                 return;
             }
@@ -625,7 +631,7 @@
                             // 那就移除所有
                             return true;
                         }
-                        return (handle.callback["__$$us_eventGuid"] == callback["__$$us_eventGuid"]);
+                        return (handle.callback["__$$us_callbackGuid"] == callback["__$$us_callbackGuid"]);
                     }());
 
                     let listener_id = handle.listener["__$$us_eventData"]["id"];
@@ -642,7 +648,7 @@
                     delete events[name];
                     if (Tool.isDom(this)) {
                         // 移除事件转派者
-                        Tool.unBindDomEvent(this, name, Tool.event_dispatcher);
+                        Tool.unBindDomEvent(this, name);
                     }
                 }
                 //----------------------------
@@ -651,7 +657,7 @@
         //----------------------------------------------------------------------
         // 清除所有监听自己者
         function __clearListener(obj, name, callback) {
-            if (callback != null && callback["__$$us_eventGuid"] == null) {
+            if (callback != null && callback["__$$us_callbackGuid"] == null) {
                 // callback 未註冊過
                 return;
             }
@@ -689,7 +695,7 @@
                         if (callback == null) {
                             return true;
                         }
-                        return (handle.callback["__$$us_eventGuid"] !== callback["__$$us_eventGuid"]);
+                        return (handle.callback["__$$us_callbackGuid"] !== callback["__$$us_callbackGuid"]);
                     }());
 
                     let listener_match;
@@ -731,14 +737,14 @@
                     delete self_eventData.events[name];
                     if (Tool.isDom(this)) {
                         // 移除事件转派者
-                        Tool.unBindDomEvent(this, name, Tool.event_dispatcher);
+                        Tool.unBindDomEvent(this, name);
                     }
                 }
             }
         }
         //----------------------------------------------------------------------
         function __stopListening(eventMaker, name, callback) {
-            if (callback != null && callback["__$$us_eventGuid"] == null) {
+            if (callback != null && callback["__$$us_callbackGuid"] == null) {
                 // callback 未註冊過
                 return;
             }
@@ -790,7 +796,7 @@
                         if (callback == null) {
                             return true;
                         }
-                        return (handle.callback["__$$us_eventGuid"] === callback["__$$us_eventGuid"]);
+                        return (handle.callback["__$$us_callbackGuid"] === callback["__$$us_callbackGuid"]);
                     }());
                     //----------------------------
                     // 正確的傾聽者
@@ -818,7 +824,7 @@
                 } else {
                     delete events[name];
                     if (Tool.isDom(eventMaker)) {
-                        Tool.unBindDomEvent(eventMaker, name, Tool.event_dispatcher);
+                        Tool.unBindDomEvent(eventMaker, name);
                     }
                 }
             }
@@ -826,13 +832,13 @@
         //----------------------------------------------------------------------
         // args: 要發送的參數
         // domEvent 來自 dom 的事件，由 dom 发出事件
-        function __trigger(eventName, args, domEvent) {
+        function __trigger(eventName, _data, domEvent) {
             debugger;
 
             if (!domEvent && Tool.isDom(this)) {
                 // 若不是来自 dom 的事件，而是人为想发出事件
                 // 透过 dom 的发射性统
-                Tool.dom_triggerEvents(this, eventName, args);
+                Tool.dom_triggerEvents(this, eventName, _data);
                 return;
             }
             //----------------------------
@@ -843,7 +849,7 @@
             let eventList;
 
             let data = {
-                args: args,
+                data: _data,
                 triggerEvent: eventName
             };
 
@@ -865,7 +871,7 @@
 
             if (eventList) {
                 data.eventList = eventList;
-                data.registEventName = eventName;
+                data.registEventName = 'all';
                 Tool.triggerEvents(data, domEvent);
             }
         }
@@ -963,9 +969,9 @@
             //------------------------------------------------------------------
             // dom.trigger 专用
             _s.dom_triggerEvents = function (dom, name, args) {
-                
+
                 let event = new CustomEvent(name, {
-                    detail: detail,
+                    detail: args,
                     bubbles: true,
                     cancelable: true
                 });
@@ -978,7 +984,7 @@
 
                 let target = data.target;
                 let eventList = data.eventList;
-                let detail = data.detail;
+                let _data = data.data;
                 // 註冊的 eventName
                 let registEventName = data.registEventName;
 
@@ -1003,7 +1009,7 @@
                         continue;
                     }
                     //----------------------------
-                 
+
                     // 事件本體
                     let e = domEvent || {
                         target: target,
@@ -1011,9 +1017,9 @@
                         currentTarget: _listener
                     };
 
-                    let job = (function (callback, e, detail) {
-                        callback.call(this, e, detail);
-                    }).bind(handle.context, handle.callback, e, detail)
+                    let job = (function (callback, e, _data) {
+                        callback.call(this, e, _data);
+                    }).bind(handle.context, handle.callback, e, _data)
                     //----------------------------
                     job();
                 }
@@ -1034,7 +1040,7 @@
                     let args = Array.from(arguments).split(1);
                     args = Tool.array2obj(args);
                     detail = Object.assign({}, args);
-                }else if(typeof(e) == 'object'){
+                } else if (typeof (e) == 'object') {
                     detail = e.detail;
                 }
 
@@ -1051,7 +1057,7 @@
                     __off.call(context, eventName, _callback);
                     callback.apply(this, arguments);
                 }
-                _.defineProperty(_callback, "__$$us_eventGuid", callback["__$$us_eventGuid"], false);
+                _.defineProperty(_callback, "__$$us_callbackGuid", callback["__$$us_callbackGuid"], false);
 
                 return _callback;
             };
@@ -1063,32 +1069,20 @@
                     __stopListening.call(context, eventMaker, eventName, _callback);
                     callback.apply(this, arguments);
                 }
-                _.defineProperty(_callback, "__$$us_eventGuid", callback["__$$us_eventGuid"], false);
+                _.defineProperty(_callback, "__$$us_callbackGuid", callback["__$$us_callbackGuid"], false);
 
                 return _callback;
             };
             //------------------------------------------------------------------
             // 為 dom 綁定事件
-            _s.bindDomEvent = function (dom, name, callback) {
-                if (hasJquery) {
-                    // 用 jq 的方式綁定
-                    // jq.trigger 才有作用
-                    name = name + '.' + eventSetting.eventNamePrefix;
-
-                    $(dom).on(name, callback);
-                    return;
-                }
-                dom.addEventListener(name, _s.event_dispatcher);
+            _s.bindDomEvent = function (dom, name) {
+                let callback = _s.event_dispatcher;
+                dom.addEventListener(name, callback);
             };
             //------------------------------------------------------------------
             // 移除 dom 上绑定的事件
-            _s.unBindDomEvent = function (dom, name, callback) {
-                if (hasJquery) {
-                    name = name + '.' + eventSetting.eventNamePrefix;
-
-                    $(dom).off(name);
-                    return;
-                }
+            _s.unBindDomEvent = function (dom, name) {
+                let callback = _s.event_dispatcher;                
                 dom.removeEventListener(name, callback);
             };
 
