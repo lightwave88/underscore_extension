@@ -88,49 +88,42 @@
             _.mixin({
                 // 等待一個任務並設下時限
                 waitJob: function (job, timeLimit) {
-                    const def = _.deferred();
+                    let _res;
+                    let _rej;
+
+                    let p1 = new Promise(function (res, rej) {
+                        _res = res;
+                        _rej = rej;
+                    });
                     //-----------------------
                     let msg;
 
-                    let p;
+                    let p2;
                     if (typeof (job) == "function") {
-                        p = job();
+                        p2 = job();
 
-                        if (!(p instanceof Promise)) {
-                            def.reject("waitJob arg[0] must return promise");
+                        if (!(p2 instanceof Promise)) {
+                            _rej("waitJob arg[0] must return promise");
                         }
                     } else if (job instanceof Promise) {
-                        p = job;
+                        p2 = job;
                     } else {
-                        def.reject("waitJob arg[0] must be promise or function return promise");
+                        _rej("waitJob arg[0] must be promise or function return promise");
                     }
                     //-----------------------
 
-                    let timehandle = setTimeout(function () {
-                        debugger;
-                        clearTimeout(timehandle);
-                        timehandle = undefined;
-                        def.reject('timeout');
-                    }, timeLimit);
-
-
-                    p = p.then(function (data) {
-                        debugger;
-                        def.resolve(data);
+                    p2.then(function (data) {
+                        _res(data);
                     }, function (err) {
-                        debugger;
-                        def.reject(err);
+                        _rej(err);
                     });
 
-                    p.then(function () {
-                        debugger;
-                        if (timehandle) {
-                            clearTimeout(timehandle);
-                            timehandle = undefined;
-                        }
-                    });
+                    setTimeout(function () {
+                        _rej(new Error('timeout'));
+                    }, timeLimit);
                     //-----------------------
-                    return def.promise();
+
+                    return p1;
                 }
             });
         }
@@ -143,25 +136,27 @@
                     if (callback instanceof Promise) {
                         p = Promise.resolve(callback);
                     } else if (typeof (callback) == "function") {
-                        callback = (context === undefined ? callback : callback.bind(context));
+                        callback = (context === undefined ? callback : callback.bind(this));
 
                         p = new Promise(callback);
                     } else if (Array.isArray(callback)) {
-                        callback = (context === undefined ? callback : callback.bind(context));
+                        callback = (context === undefined ? callback : callback.bind(this));
 
                         p = Promise.all(callback);
                     } else {
                         p = Promise.resolve(callback);
                     }
                     //-----------------------
-                    if (p['$status'] == null) {
-                        _.defineProperty(p, '$status', 0, false);
+                    if (p.__status == null) {
+                        _.defineProperty(this._promise, '$status', 0, false);
                     }
 
                     p.then(function () {
                         p['$status'] = 1;
                     }, function (err) {
                         p['$status'] = 2;
+                        err = (err instanceof Error) ? err : new Error(err);
+                        throw err;
                     });
 
                     return p;
@@ -169,6 +164,66 @@
             });
         }
         //----------------------------
+        if (typeof _.readFile == null) {
+            _.mixin({
+                readFile: function (path, code, timelimit) {
+
+                    code = code || 'utf-8';
+                    //-----------------------
+                    let _res;
+                    let _rej;
+
+                    let p1 = new Promise(function (res, rej) {
+                        _res = res;
+                        _rej = rej;
+                    });
+                    //-----------------------
+                    let fs;
+                    try {
+                        fs = require('fs');
+                    } catch (error) {
+                        _rej('readFile() no support in this sys');
+                    }
+
+                    let p = new Promise(function (res, rej) {
+                        fs.exists(path, function (data) {
+                            res(data);
+                        });
+                    });
+                    //-----------------------
+                    p = p.then(function (data) {
+                        let r;
+                        if (!data) {
+                            r = null;
+                        } else {
+                            r = new Promise(function (res, rej) {
+                                fs.readFile(path, code, function (err, data) {
+                                    if (err) {
+                                        rej(err);
+                                    } else {
+                                        res(data);
+                                    }
+                                });
+                            });
+                        }
+                        return r;
+                    });
+                    //-----------------------
+                    p.then(function (data) {
+                        _res(data);
+                    }, function (err) {
+                        _rej(err);
+                    });
+                    //-----------------------
+                    if (timelimit) {
+                        setTimeout(function () {
+                            _rej('timeout');
+                        }, timelimit);
+                    }
+                    return p1;
+                }
+            });
+        }
 
     }
 
