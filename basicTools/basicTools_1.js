@@ -147,8 +147,8 @@
                         p = Promise.resolve(callback);
                     }
                     //-----------------------
-                    if (p.__status == null) {
-                        _.defineProperty(this._promise, '$status', 0, false);
+                    if (p['$status'] == null) {
+                        _.defineProperty(p, '$status', 0, false);
                     }
 
                     p.then(function () {
