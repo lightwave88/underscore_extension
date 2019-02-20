@@ -5,15 +5,11 @@
             // 指定 loadash|underscode 的 path
             module.exports = function(obj) {
                 // 建構
-                factory_1(obj);
+                factory(obj);
             };
-        } else {
-            if (typeof(global._) === "undefined") {
-                // worker 本體建構
-                return;
-            }
+        } else {            
             // 建構
-            factory_1(global._);
+            factory(global._);
         }
     }());
 
@@ -37,7 +33,12 @@
         });
     }
     //==========================================================================
-    function factory_1(_) {
+    function factory(_) {
+
+        if(_ == null){
+            return;
+        }
+
         if (typeof Promise !== 'function') {
             throw new Error('need Promise library');
         }
