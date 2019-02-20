@@ -1,4 +1,4 @@
-!(function(global) {
+!(function (global) {
     // debugger;
     ////////////////////////////////////////////////////////////////////////////
     //
@@ -6,20 +6,21 @@
     // _.worker(原本 _ 的命令, 原本的參數...)
     //
     ////////////////////////////////////////////////////////////////////////////
-    (function() {
+    (function () {
         let _;
         if (typeof module !== 'undefined' && module.exports) {
             // 暫不支援 node.js
-            module.exports = function(_path) {
+            module.exports = function (_path) {
                 _ = require(_path);
 
                 nodeJsFactory(_);
             };
-        } else if (typeof(window) == 'undefined' && typeof(self) != "undefined" &&
-            typeof(importScripts) == 'function') {
+        } else if (typeof (window) == 'undefined' && typeof (self) != "undefined" &&
+            typeof (importScripts) == 'function') {
             // webWorker 環境
+            // debugger;
 
-            if (typeof(global._) === "undefined") {
+            if (typeof (global._) === "undefined") {
                 // worker 本體初始建構
                 workerFactory(global);
             }
@@ -41,7 +42,7 @@
     function nodeJsFactory(_) {
         _.mixin({
             // 返回 promise
-            worker: function() {
+            worker: function () {
                 throw new Error("_.worker() not support node.js yet");
             }
         });
@@ -52,8 +53,12 @@
         console.log('i am worker');
         let $_;
 
-        self.addEventListener('message', function(e) {
-            debugger;
+        self.addEventListener('message', function (e) {
+            // debugger;
+            
+            console.log('---------------');
+            console.log('worker> get web message');
+            
             let data = e.data || {};
             //----------------------------            
             let scriptPath = data['scriptPath'] || null;
@@ -63,24 +68,41 @@
             let id = data.id || 0;
             //----------------------------
             // load _.script
-            if ($_ == null && scriptPath) {
-                // 初始化
-                importScripts(scriptPath);
-                importScripts(extensionPath);
-                $_ = self._;
-                return;
+            if ($_ == null) {
+                console.log('worker(%s)> init', id);
+
+                if(scriptPath){
+                    console.log('worker(%s)> import script', id);
+                    // 初始化
+                    importScripts(scriptPath);
+                    importScripts(extensionPath);
+                    $_ = self._;
+                }else{
+                    console.log('worker(%s)> no scriptPath', id);
+                }
+
+                self.postMessage({});
+
+            } else {
+                // debugger;
+
+                console.log('worker(%s)> do job', id);
+
+                if (!command && typeof $_[command] !== 'function') {
+                    throw new TypeError('no assign fun');
+                }
+                // debugger;
+                // _ 的運算
+                let res = $_[command].apply($_, args);
+                //----------------------------
+                // console.log("worker(%s) done", id);
+                self.postMessage({
+                    res: res
+                });
             }
-            //----------------------------
-            if (!command && typeof $_[command] !== 'function') {
-                throw new TypeError('no assign fun');
-            }
-            // _ 的運算
-            let res = $_[command].apply($_, args);
-            //----------------------------
-            // console.log("worker(%s) done", id);
-            self.postMessage({
-                res: res
-            });
+            
+            console.log('---------------');
+
         });
     }
     ////////////////////////////////////////////////////////////////////////////
@@ -90,50 +112,51 @@
         if (_.worker == null) {
             _.mixin({
                 // 返回 promise
-                worker: workerCommand 
+                worker: workerCommand
             });
         }
 
         function workerCommand() {
-            debugger;
+            // debugger;
             let args = Array.from(arguments);
-
-            let fn = args[0];
-            if (typeof _[fn] !== 'function') {
-                throw new TypeError('fn has problem');
-            }
-            //----------------------------
             let ceo = WorkerCEO.get_instance();
 
-            debugger;
+            // debugger;
             let p = ceo.addJob(args);
 
             return p;
         }
         //======================================================================
         // 類別方法
-        (function(fn){
+        (function (fn) {
             // 設置/取得 worker 最大運行數量
-            fn.maxWorkers = function(count){
+            fn.maxWorkers = function (count) {
 
-                if(count == null){
+                if (count == null) {
                     return _.$$extension.max_workers;
-                }else{
-                    if(typeof(count) != 'number'){
+                } else {
+                    if (typeof (count) != 'number') {
                         throw new TypeError('args[0] type error');
                     }
 
                     count = Math.floor(count);
                     count = Math.abs(count);
                     _.$$extension.max_workers = count;
-                }                
+                }
+            };
+
+            fn.idleTime = function(time){
+                if(time == null){
+                    return WorkerCEO.idleTime;
+                }
+                WorkerCEO.idleTime = time;
             };
         })(workerCommand);
 
         //======================================================================
         // 整合者
         function WorkerCEO() {
-            debugger;
+            // debugger;
 
             // (lodash|underscode)的位置
             this.scriptPath = _.$$extension.scriptPath;
@@ -157,12 +180,14 @@
         }
         //----------------------------------------------------------------------
         // 類別方法
-        (function(fn) {
+        (function (fn) {
             // 單例
             fn.$$instance;
 
+            fn.idleTime = 30000;
+
             // 取得單例
-            fn.get_instance = function() {
+            fn.get_instance = function () {
                 if (fn.$$instance == null) {
                     fn.$$instance = new WorkerCEO();
                 }
@@ -170,8 +195,9 @@
             };
         })(WorkerCEO);
         //----------------------------------------------------------------------
-        (function() {
-            this.__construct = function() {
+        (function () {
+            this.__construct = function () {
+                // debugger;
                 if (!this.scriptPath) {
                     throw new Error('no get _.scriptPath');
                 }
@@ -186,8 +212,11 @@
             };
             //------------------------------------------------------------------
             // 返回 promise
-            this.addJob = function(args) {
-                debugger;
+            this.addJob = function (args) {
+                // debugger;
+                console.log('--------------');
+                console.log('WorkerCEO> 加入工作');
+
                 let job = new Job(this, args);
 
                 // 把任務加入
@@ -197,25 +226,25 @@
                 let w = this._checkIdleWorker();
 
                 if (w) {
-                    w._getJob();
+                    w.getJob();
                 }
-
+                console.log('--------------');
                 return job.promise();
             };
-            
+
             //------------------------------------------------------------------
             // 新增 worker
-            this.addWorker = function(workerProxy) {
+            this.addWorker = function (workerProxy) {
                 this.workers.add(workerProxy);
             };
             //------------------------------------------------------------------
             // 移除指定的 worker
-            this.removeWorker = function(workerProxy) {
-                this.works.delete(workerProxy);
+            this.removeWorker = function (workerProxy) {
+                this.workers.delete(workerProxy);
             };
             //------------------------------------------------------------------
             // 取得 job
-            this._getJob = function() {
+            this._getJob = function () {
                 if (this.jobList.length > 0) {
                     return this.jobList.pop();
                 }
@@ -224,41 +253,47 @@
             };
             //------------------------------------------------------------------
             // 檢查是否有空閒的 worker
-            this._checkIdleWorker = function() {
-
+            this._checkIdleWorker = function () {
+                let idleWork = null;
                 // 找尋空嫌中的 worker
-                let idleWork = this._findIdleWorkers();                
+                let idleWorks = this._findIdleWorkers();
+
+                if(idleWorks.length > 0){
+                    idleWork = idleWorks[0]; 
+                }
                 //----------------------------
                 if (idleWork) {
-                    console.log("have idle worker");
+                    console.log("have idle worker(%s) idleWorkers.number(%s)...........", idleWork.id, idleWorks.length);
                     return idleWork;
-                } else{
+                } else {
                     // 沒有空閒中的 worker
-                    if (this.workers.length < this.workerCount) {
+                    if (this.workers.size < this.workerCount) {
                         // 沒有閒置的 worker
                         // 但已有的 worker 數量尚未達上限
-                        console.log("create new worker");
-                        idleWork = new WorkerProxy(this);
-                        return idleWork;
+                        console.log("no idle worker, create new worker.........");
+                        new WorkerProxy(this);
                     } else {
-                        console.log("max workers and all worker busy(%s)(%s)", this.workers.length, this.workerCount);
+                        console.log('no idle worker and reachmax workers........');
                     }
-                } 
+                }
 
                 return null;
             };
             //------------------------------------------------------------------
             // 找出閒置中的 worker
-            this._findIdleWorkers = function() {
-                let worker = null;
+            this._findIdleWorkers = function () {
+                
+                let workers = Array.from(this.workers);
 
-                this.workers.some(function(w) {
-                    if (w.job == null) {
-                        worker= w;
+                workers = workers.slice();
+
+                workers = workers.filter(function (w) {
+                    if (!w.busy) {                        
                         return true;
                     }
                 });
-                return worker;
+
+                return workers;
             };
         }).call(WorkerCEO.prototype);
         ////////////////////////////////////////////////////////////////////////
@@ -271,8 +306,8 @@
             this.ceo;
             this.job;
             this.worker;
+            this.busy = false;
             this.timeHandle;
-            this.timeLimit = 30000;
             this.e_end;
             this.e_error;
             //-----------------------
@@ -280,103 +315,126 @@
         }
         WorkerProxy.uid = 1;
         //----------------------------------------------------------------------
-        (function() {
-            this.__construct = function(ceo) {
+        (function () {
+            this.__construct = function (ceo) {
                 this.ceo = ceo;
                 this.id = this.fn.uid++;
                 //------------------
                 this.worker = new Worker(this.ceo.workerPath);
 
-                this.worker.addEventListener('message', this._getEndEvent());
                 this.worker.addEventListener('error', this._getErrorEvent());
+                this.worker.addEventListener('message', this._getEndEvent());
                 //------------------
                 this.ceo.addWorker(this);
 
                 // 初始化 worker
                 // 叫 worker import _
-                this.work.postMessage({
+                
+                this.busy = true;
+                
+                console.log('worker(%s) init', this.id);
+                // 請 worker 初始化
+                this.worker.postMessage({
+                    id: (this.id),
                     scriptPath: (this.ceo.scriptPath),
                     extensionPath: (this.ceo.extensionPath)
                 });
             };
             //------------------------------------------------------------------
             // CEO 請他接下一個任務
-            this._getJob = function() {
+            this.getJob = function () {
                 this._check();
             };
-            
+
             //------------------------------------------------------------------
-            this._check = function() {
+            this._check = function () {
+                console.log('worker(%s)進入檢查', this.id)
+
                 // 檢查是否有任務
                 let job = this.ceo._getJob();
 
                 if (job == null) {
-                    if (this.ceo.workers.length == 1) {
+                    if (this.ceo.workers.size == 1) {
                         // 只留下1個 worker時
                         // 就不讓他等死
+
+                        console.log('worker(%s)沒工作，但只剩我一人，等接工作', this.id);
                         return;
                     } else {
+                        console.log('worker(%s)沒工作，進入 idle', this.id)
                         // 等死吧
                         this._idle();
                     }
                 } else {
+                    console.log('worker(%s)接工作', this.id);
                     this._doJob(job);
                 }
             };
             //------------------------------------------------------------------
-            this._doJob = function(job) {
-
+            this._doJob = function (job) {
+                
                 if (this.timeHandle) {
+                    console.log('worker(%s)俺正在 idle，被叫起來接工作', this.id);
                     // 若正在閒置中
                     clearTimeout(this.timeHandle);
                     this.timeHandle = undefined;
                 }
-
+                
+                this.busy = true;
                 this.job = job;
-                debugger;
+                // debugger;
 
                 let command = this.job.getCommand();
                 command.id = this.id;
                 console.log("id(%s)", command.id);
-
+                console.log('worker(%s) 我發出任務', this.id);
+                
                 // 請 worker 工作
                 this.worker.postMessage(command);
             };
             //------------------------------------------------------------------
             // 進入 idle 狀態
             // 若已在 idle 狀態中，就不動作
-            this._idle = function() {
+            this._idle = function () {
+                console.log('worker(%s)進入 idle', this.id);
                 if (this.timeHandle) {
+                    console.log('worker(%s)問題點', this.id);
                     return;
                 }
                 let self = this;
 
-                this.timeHandle = setTimeout(function() {
+                this.timeHandle = setTimeout(function () {
                     self.timeHandle = undefined;
                     self._terminate();
-                }, this.timeLimit);
+                }, this.ceo.idleTime);
             };
             //------------------------------------------------------------------
-            this._terminate = function() {
+            this._terminate = function () {
 
-                if (this.ceo.workers.length == 1) {
+                console.log('worker(%s) in terminate', this.id);
+
+                if (this.ceo.workers.size == 1) {
+                    console.log('worker(%s) 只剩俺一個人，等事做', this.id);
                     // 只留下1個 worker時
                     // 就不刪除
                     return;
                 }
                 //-----------------------
                 let idleWorks = this.ceo._findIdleWorkers();
+
                 idleWorks = new Set(idleWorks);
 
-                if (idleWorks.size() <= 1 && idleWorks.has(this)) {
-                    // 若大家都在忙，那就先別退休
-                    // 再等陣子吧
+                console.log('worker(%s)  idles(%s) hasme(%s)', this.id, idleWorks.size, idleWorks.has(this));
 
+                if (idleWorks.size <= 1 && idleWorks.has(this)) {
+                    // 大家都在忙，只剩我一個人有空
+                    // 不要終結自己，等待工作
+                    console.log('worker(%s) 大家都在忙，有空的只剩我一個人，再進入 idle', this.id);
                     this._idle();
                     return;
                 }
                 //-----------------------
-                console.log("terminate(%s)", this.id);
+                console.log("worker(%s) terminate", this.id);
                 this.worker.removeEventListener('message', this._getEndEvent());
                 this.worker.removeEventListener('error', this._getErrorEvent());
 
@@ -389,19 +447,30 @@
                 this.ceo = undefined;
             };
             //------------------------------------------------------------------
-            this._getEndEvent = function() {
+            this._getEndEvent = function () {
                 if (this.e_end == null) {
                     // worker 工作完會呼叫此
-                    this.e_end = (function(e) {
+                    this.e_end = (function (e) {
+
                         let job = this.job;
                         this.job = undefined;
+                        this.busy = false;
                         //----------------------------
                         let data = e.data || {};
                         let res;
-                        if (typeof(data.res) != 'undefined') {
-                            res = data.res;
+
+                        if(job){
+                            // 等待 worker 的工作完成
+                            console.log('worker(%s) job finished', this.id);
+                            if (typeof (data.res) != 'undefined') {
+                                res = data.res;
+                            }
+                            job.resolve(res);
+                        }else{
+                            // 等待 worker 初始化完成
+                            console.log('worker(%s) inited', this.id)
                         }
-                        job.resolve(res);
+
                         this._check();
                     }).bind(this);
                 }
@@ -409,19 +478,28 @@
                 return this.e_end;
             };
             //------------------------------------------------------------------
-            this._getErrorEvent = function() {
+            this._getErrorEvent = function () {
 
-                if(thie.e_error == null){
+                if (this.e_error == null) {
                     // worker error 完會呼叫此
-                    thie.e_error = (function(e) {
+                    this.e_error = (function (e) {
                         let job = this.job;
                         this.job = undefined;
+                        this.busy = false;
 
-                        job.reject(e);
+                        if(job){
+                            console.log('worker(%s) job error', this.id);
+                            // 等待 worker 的工作錯誤
+                            job.reject(e);                            
+                        }else{
+                            // 等待 worker 初始化錯誤
+                            console.log('worker(%s) inited error', this.id);
+                        }
+
                         this._check();
                     }).bind(this);
                 }
-                return thie.e_error;
+                return this.e_error;
             };
         }).call(WorkerProxy.prototype);
         ////////////////////////////////////////////////////////////////////////
@@ -437,13 +515,14 @@
             this.__construct(args);
         }
         //----------------------------------------------------------------------
-        (function() {
-            this.__construct = function(args) {
+        (function () {
+            this.__construct = function (args) {
+
                 this.command = args.shift();
 
                 // console.log(typeof (_[this.command]));
 
-                if (typeof(_[this.command]) !== "function") {
+                if (typeof (_[this.command]) !== "function") {
                     throw new TypeError("no this function(" + this.command + ")");
                 }
 
@@ -452,7 +531,7 @@
             };
             //------------------------------------------------------------------
             // 對 worker 發出命令
-            this.getCommand = function() {
+            this.getCommand = function () {
                 let command = {
                     command: (this.command),
                     args: (this.args)
@@ -460,15 +539,15 @@
                 return command;
             };
             //------------------------------------------------------------------
-            this.resolve = function(data) {
+            this.resolve = function (data) {
                 this.def.resolve(data);
             };
             //------------------------------------------------------------------
-            this.reject = function(e) {
+            this.reject = function (e) {
                 this.def.reject(e);
             };
             //------------------------------------------------------------------
-            this.promise = function() {
+            this.promise = function () {
                 return this.def.promise();
             };
         }).call(Job.prototype);
