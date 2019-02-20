@@ -14,6 +14,11 @@
     }());
 
     function factory(_) {
+        if (_ == null) {
+            return;
+        }
+        //------------------
+
         if (_.defineProperty == null) {
             _.mixin({
                 // (Object.defineProperty)的封裝
@@ -136,11 +141,16 @@
                     if (callback instanceof Promise) {
                         p = Promise.resolve(callback);
                     } else if (typeof (callback) == "function") {
-                        callback = (context === undefined ? callback : callback.bind(this));
+                        callback = (context == null) ? callback : callback.bind(context);
 
                         p = new Promise(callback);
                     } else if (Array.isArray(callback)) {
-                        callback = (context === undefined ? callback : callback.bind(this));
+
+                        if (context != null) {
+                            callback = callback.map(function (fn) {
+                                return fn.bind(context);
+                            });
+                        }
 
                         p = Promise.all(callback);
                     } else {
