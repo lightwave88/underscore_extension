@@ -1,4 +1,4 @@
-!(function (g) {
+!(function (_g) {
     ////////////////////////////////////////////////////////////////////////////
     //
     // extension_1
@@ -10,8 +10,8 @@
 
         if (typeof window != "undefined" && typeof document != "undefined") {
             // browser
-
             factory(window._, 'browser');
+            
         } else if (typeof module != 'undefined' && module.exports) {
             // node.js
             module.exports = function (obj) {
@@ -19,7 +19,7 @@
             };
         } else if (typeof (window) == "undefined" && self != "undefined" && typeof (importScripts) == 'function') {
             // webWorker 環境
-            factory(g._, 'worker');
+            factory(_g._, 'worker');
         } else {
             // factory(g._, 'other');
         }
