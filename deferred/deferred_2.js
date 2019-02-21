@@ -1,4 +1,4 @@
-!(function(global) {
+!(function(_g) {
     
     (function() {
         if (typeof module !== 'undefined' && module.exports) {
@@ -9,11 +9,9 @@
             };
         } else {            
             // 建構
-            factory(global._);
+            factory(_g._);
         }
     }());
-
-    return;
 
     //==========================================================================
     // 設置 def.status
