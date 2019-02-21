@@ -1,16 +1,16 @@
-!(function (global) {
-
-
+!(function (g) {
     ////////////////////////////////////////////////////////////////////////////
     //
     // extension_1
     //
     ////////////////////////////////////////////////////////////////////////////
     (function () {
+        debugger;
         // 環境檢測
 
         if (typeof window != "undefined" && typeof document != "undefined") {
-            // 瀏覽器環境
+            // browser
+
             factory(window._, 'browser');
         } else if (typeof module != 'undefined' && module.exports) {
             // node.js
@@ -19,9 +19,9 @@
             };
         } else if (typeof (window) == "undefined" && self != "undefined" && typeof (importScripts) == 'function') {
             // webWorker 環境
-            factory(global._, 'worker');
+            factory(g._, 'worker');
         } else {
-            factory(global._, 'other');
+            // factory(g._, 'other');
         }
     }());
     //==========================================================================
@@ -74,19 +74,19 @@
                 case 'nodejs':
                     _nodejs();
                     break;
-                    case 'browser':
+                case 'browser':
                     _browser();
                     break;
                 default:
                     break;
             }
 
-            function _nodejs(){
+            function _nodejs() {
                 // debugger;
                 _.$$extension1.extensionPath = __dirname;
             }
 
-            function _browser(){
+            function _browser() {
                 // debugger;
 
                 if (typeof document === 'undefined') {
@@ -94,12 +94,12 @@
                 }
                 let scripts = Array.from(document.querySelectorAll('script'));
                 let script = scripts.pop();
-    
+
                 _.$$extension1.extensionPath = script.src;
                 //----------------------------
                 // find scriptPath
                 let reg = /(\\|\/)?([^\/]*?(underscore|lodash)[^\/]*?)$/i;
-    
+
                 for (let i = (scripts.length - 1); i >= 0; i--) {
                     let src = scripts[i].src;
                     if (reg.test(src)) {
