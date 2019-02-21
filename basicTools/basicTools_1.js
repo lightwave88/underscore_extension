@@ -1,4 +1,9 @@
-!(function (_global) {
+!(function (_g) {
+    ////////////////////////////////////////////////////////////////////////////
+    //
+    // 基本工具
+    //
+    ////////////////////////////////////////////////////////////////////////////
     (function () {
         // debugger;
 
@@ -9,10 +14,10 @@
                 factory(obj);
             };
         } else {
-            factory(_global._);
+            factory(_g._);
         }
     }());
-
+    //--------------------------------------------------------------------------
     function factory(_) {
         if (_ == null) {
             return;
@@ -133,7 +138,7 @@
             });
         }
         //----------------------------
-        if (typeof _.promise === 'undefined') {
+        if (_.promise == 'null') {
             _.mixin({
                 // 產生可以追蹤狀態的 promise
                 promise: function (callback, context) {
@@ -174,67 +179,6 @@
             });
         }
         //----------------------------
-        if (typeof _.readFile == null) {
-            _.mixin({
-                readFile: function (path, code, timelimit) {
-
-                    code = code || 'utf-8';
-                    //-----------------------
-                    let _res;
-                    let _rej;
-
-                    let p1 = new Promise(function (res, rej) {
-                        _res = res;
-                        _rej = rej;
-                    });
-                    //-----------------------
-                    let fs;
-                    try {
-                        fs = require('fs');
-                    } catch (error) {
-                        _rej('readFile() no support in this sys');
-                    }
-
-                    let p = new Promise(function (res, rej) {
-                        fs.exists(path, function (data) {
-                            res(data);
-                        });
-                    });
-                    //-----------------------
-                    p = p.then(function (data) {
-                        let r;
-                        if (!data) {
-                            r = null;
-                        } else {
-                            r = new Promise(function (res, rej) {
-                                fs.readFile(path, code, function (err, data) {
-                                    if (err) {
-                                        rej(err);
-                                    } else {
-                                        res(data);
-                                    }
-                                });
-                            });
-                        }
-                        return r;
-                    });
-                    //-----------------------
-                    p.then(function (data) {
-                        _res(data);
-                    }, function (err) {
-                        _rej(err);
-                    });
-                    //-----------------------
-                    if (timelimit) {
-                        setTimeout(function () {
-                            _rej('timeout');
-                        }, timelimit);
-                    }
-                    return p1;
-                }
-            });
-        }
-
     }
 
 })(this || {});
