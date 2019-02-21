@@ -1,10 +1,12 @@
-!(function (global) {
-    let $_;
+!(function (_g) {   
 
     const Tool = {};
 
     // 事件的藍圖
     const Event = {};
+
+    // 全局事件
+    let $bus;
 
     // 設定文件
     const eventSetting = {};
@@ -22,28 +24,6 @@
     // 加快 obj_1 === obj_2 的步驟
     let event_id = 1;
 
-    let supportProto = (function () {
-        let res = false;
-        try {
-            let test = {};
-            test.__proto__ = {};
-            res = true;
-            test = undefined;
-        } catch (e) {
-        }
-        return res;
-    })();
-
-    // 是否有 jquery
-    let hasJquery = (function () {
-        let judge_1 = (global.jQuery != null || global.$ != null);
-
-        let judge_2 = (global.document != null);
-
-        return (judge_1 && judge_2);
-    })();
-
-
     //==========================================================================
 
     (function () {
@@ -60,12 +40,10 @@
                 return;
             }
             // 建構
-            factory(global._);
+            factory(_g._);
         }
 
     }());
-
-    return;
     //==========================================================================
     // 工厂
     function factory(_) {
@@ -85,14 +63,13 @@
         // 取得 extention 全域變數
         const $extension = _.$$extension;
 
-        // 全局事件
-        let $bus;
+        
 
         //----------------------------------------------------------------------
         _.mixin({
             // API
             // _.event(物件) 讓物件具有 event 的能力
-            // noProto: 不再原型鏈中插入一個有 event 功能的物件
+            // proto: 在原型鏈中插入一個有 event 功能的物件
             // 不然就直接覆蓋在物件身上
             // prefix: 避免撞名，在命令前加一個符號
             // obj 不能是 dom
@@ -100,14 +77,8 @@
         });
 
 
-        function eventCommand(obj, noProto, prefix) {
-            // debugger;
-            let args = Array.from(arguments);
-
-            if (args.length == 0) {
-                // 返回设定物件
-                return eventSetting;
-            }
+        function eventCommand(obj, proto, prefix) {
+            // debugger;         
 
             if (obj == null || typeof (obj) != "object") {
                 throw new TypeError("_.event() must be obj");
@@ -118,12 +89,12 @@
             }
             //----------------------------
 
-            noProto = (noProto == null) ? false : true;
+            proto = (proto == null) ? false : true;
             prefix = prefix ? prefix : false;
             //------------------
             // 是否要将 API 置放在原型炼中
             let assignObj = obj;
-            if (noProto && supportProto) {
+            if (proto) {
                 let proto = Object.getPrototypeOf(obj);
                 // 創建一個繼承 proto 的物件
                 assignObj = Object.create(proto);
