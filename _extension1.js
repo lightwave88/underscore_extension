@@ -67,7 +67,7 @@
         //----------------------------
 
         (function () {
-            debugger;
+            // debugger;
             // find extensionPath
 
             switch (_.$$extension1.environment) {
@@ -82,12 +82,12 @@
             }
 
             function _nodejs(){
-                debugger;
+                // debugger;
                 _.$$extension1.extensionPath = __dirname;
             }
 
             function _browser(){
-                debugger;
+                // debugger;
 
                 if (typeof document === 'undefined') {
                     return;
