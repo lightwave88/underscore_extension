@@ -1,4 +1,4 @@
-!(function (_g) {
+!(function (g) {
     ////////////////////////////////////////////////////////////////////////////
     //
     // 基本工具
@@ -14,15 +14,15 @@
                 factory(obj);
             };
         } else {
-            factory(_g._);
+            if(g._ != null){
+                factory(g._);
+            }
         }
     }());
     //--------------------------------------------------------------------------
     function factory(_) {
-        if (_ == null) {
-            return;
-        }
-        //------------------
+        
+        //----------------------------
 
         if (_.defineProperty == null) {
             _.mixin({
@@ -138,7 +138,7 @@
             });
         }
         //----------------------------
-        if (_.promise == 'null') {
+        if (_.promise == null) {
             _.mixin({
                 // 產生可以追蹤狀態的 promise
                 promise: function (callback, context) {
