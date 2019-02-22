@@ -1,4 +1,4 @@
-!(function(_g) {
+!(function(g) {
     
     (function() {
         if (typeof module !== 'undefined' && module.exports) {
@@ -7,9 +7,12 @@
                 // 建構
                 factory(obj);
             };
-        } else {            
-            // 建構
-            factory(_g._);
+        } else {
+            
+            if(g._ != null){
+                // 建構
+                factory(g._);
+            }
         }
     }());
 
@@ -31,11 +34,7 @@
         });
     }
     //==========================================================================
-    function factory(_) {
-
-        if(_ == null){
-            return;
-        }
+    function factory(_) {        
 
         if (typeof Promise !== 'function') {
             throw new Error('need Promise library');
