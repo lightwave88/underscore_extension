@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script src="./data/taipeiHotelData.js"></script>
+    <script id="script_1" src="../../js_lib/underscore-1.9.1.js"></script>
+    <script src="../../js_lib/_extension1/_extension1.php"></script>
+    <script>
+        // 設置 worker script 的位置
+        _.worker.workerPath = '../../js_lib/_extension1/_workerScript.js';
+        console.dir(_);
+        // 取得 worker 各項參數數值
+        console.dir(_.worker.setting);
+
+        // 資料a
+        let data_a;
+
+        // 資料a的副本，但會修改其中一個項目
+        let data_b;
+
+        let workList = 'abcdefghijklmnopqrstuvxyz';
+
+        (function () {
+            // 指派資料
+            data_a = TaipeiHotelData.result.results;
+            data_b = JSON.parse(JSON.stringify(data_a));
+            
+            // console.log('要被搜尋的資料');
+            // console.log(JSON.stringify(data_b[500]));
+            // 修改其中一項的資料
+            // data_b[500]['address'] = "臺北市大同區華陰街179號3-5樓";
+        })();
+
+
+
+        function t_1() {
+            let time_tag = _.random(0, (workList.length - 1));
+            time_tag = workList[time_tag];
+            console.log('time tag(%s)', time_tag);
+
+            console.time(time_tag);
+            // 用 worker 在資料中找尋要找的
+            let p = _.worker('findIndex', data_a, { "address": "臺北市大同區華陰街179號3-5樓" });
+
+            p.then(function (index) {
+                console.timeEnd(time_tag);
+                console.log('time tag(%s) end', time_tag);
+                
+                index = Number(index);
+                console.log(JSON.stringify(data_a[index]));
+
+                console.log('--------------');
+            }, function (e) {
+                console.timeEnd(time_tag);
+                console.log('time tag(%s) end', time_tag);
+                alert('err....');
+                console.dir(e);
+            });
+        }
+
+        function t_2() {
+            console.time('a');
+            // 不用 worker 做查詢
+            console.log(_.findIndex(data_a, { "address": "臺北市大同區華陰街179號3-5樓" }));
+            console.timeEnd('a');
+        }
+    </script>
+</head>
+
+<body>
+    <div>
+        <button onclick="t_1()">worker</button>
+        <button onclick="t_2()">normal</button>
+    </div>
+</body>
+
+</html>
