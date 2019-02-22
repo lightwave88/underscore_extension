@@ -5,7 +5,7 @@
     //
     ////////////////////////////////////////////////////////////////////////////
     (function () {
-        debugger;
+        // debugger;
         // 環境檢測
 
         if (typeof window != "undefined" && typeof document != "undefined") {
