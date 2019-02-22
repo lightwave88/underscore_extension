@@ -1,4 +1,4 @@
-!(function (_g) {   
+!(function (g) {   
 
     const Tool = {};
 
@@ -35,22 +35,18 @@
                 factory(obj);
             };
         } else {
-            if (typeof (global._) === "undefined") {
+            if (typeof (g._) != "undefined") {
                 // worker 本體建構
-                return;
+                
+                // 建構
+                factory(g._);
             }
-            // 建構
-            factory(_g._);
         }
 
     }());
     //==========================================================================
     // 工厂
-    function factory(_) {
-
-        if(_ == null){
-            return;
-        }
+    function factory(_) {        
 
         ////////////////////////////////////////////////////////////////////////
         //
@@ -61,9 +57,7 @@
         ////////////////////////////////////////////////////////////////////////
 
         // 取得 extention 全域變數
-        const $extension = _.$$extension;
-
-        
+        const $extension = _.$$extension;       
 
         //----------------------------------------------------------------------
         _.mixin({
