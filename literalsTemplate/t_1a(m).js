@@ -3,6 +3,10 @@
 // 目的將 <script type="text/_"><script> 轉換成 <%  %>
 // 可作為解析 dom 樹的雛型 
 //
+// 最大的麻煩是 script 裡面的內容會嚴重干擾分段
+// 這裡採用 script 套嵌的檢查 不保險 若內容有 script 未關閉
+// 就會出錯
+// 
 ///////////////////////////////////////////////////////////////////////////////
 module.exports = Node;
 
@@ -110,13 +114,13 @@ function Node(content, p) {
         //----------------------------
         debugger;
         let replaceCount = total - _content.length;
+        let scriptContent = content.substring(0, replaceCount);
 
         if (front != foot) {
             // 解析錯誤
-            throw new Error('<script> no close');
+            throw new Error(`script no close (${scriptContent})`);
         } else {
             debugger;
-            let scriptContent = content.substring(0, replaceCount);
 
             new ScriptNode(scriptContent, this);
 
@@ -213,7 +217,6 @@ ScriptNode.prototype = Object.create(Node.prototype);
                 self.type = g2;
             }
         });
-
     };
     //------------------
     this._check1 = function(){
