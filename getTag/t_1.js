@@ -24,7 +24,7 @@ function X1() {
 
         while ((_chart = content[i++]) !== undefined) {
             debugger;
-            
+
             hasChecked = content.substring(0, i);
             noCheckArea = content.substring(i);
             console.log(noCheckArea);
@@ -38,20 +38,21 @@ function X1() {
                     debugger;
 
                     // 若確定 tagName
-                    // 找出是否有特殊的處理方式                    
-                    let { node, index } = m.findEndTag((i - tagArea.length), tagArea, noCheckArea);
+                    // 找出是否有特殊的處理方式
+
+                    // j tagArea 之前的文字
+                    let j = i - tagArea.length;
+                    let { node, index } = m.find(j, tagArea, content);
 
                     this.nodeList.push(node);
                     tagArea = '';
 
-                    i = index;
+                    i = index+1;
 
                     afterStart = false;
                     debugger;
                     continue;
                 }
-
-
             } else {
                 if (/</.test(_chart)) {
                     tagArea = '';
@@ -100,4 +101,3 @@ function X1() {
 
 
 }).call(X1.prototype);
-
