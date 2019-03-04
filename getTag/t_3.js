@@ -13,7 +13,7 @@ let method_obj;
 
 const parentMethod = {
     tag: undefined,
-    node: '',
+    nodeName: '',
     nodeContent: '',
     'test_1': function () {
         debugger;
@@ -75,15 +75,15 @@ const parentMethod = {
 };
 //---------------------------------
 method_obj = Object.assign({}, parentMethod, {
-    tag: '<\w+ >',
+    tag: '<\w+ >帶參數的一般標籤',
     checkTagHead: function (tagArea) {
         debugger;
 
         let res;
-        if ((res = /<\/?(\w+)\s$/.exec(tagArea)) != null) {
+        if ((res = /<(\w+)\s$/.exec(tagArea)) != null) {
 
             let clone = Object.assign({}, this);
-            clone.node = res[1];
+            clone.nodeName = res[1];
             return clone;
         }
         return null;
@@ -99,15 +99,18 @@ method_obj = Object.assign({}, parentMethod, {
 methodList.push(method_obj);
 //---------------------------------
 method_obj = Object.assign({}, parentMethod, {
-    tag: '<\w+>',
+    tag: '<\w+/>沒參數的一般標籤',
     checkTagHead: function (tagArea) {
         // debugger;
 
         let res;
-        if ((res = /<\/?(\w+)\/?>$/.exec(tagArea)) != null) {
+        if ((res = /<(\w+)\/?>$/.exec(tagArea)) != null) {
+
+            let nodeName = res[1];
+
 
             let clone = Object.assign({}, this);
-            clone.node = res[1];
+            clone.nodeName = nodeName;
             return clone;
         }
         return null;
@@ -120,8 +123,29 @@ method_obj = Object.assign({}, parentMethod, {
 });
 
 methodList.push(method_obj);
+//---------------------------------
+method_obj = Object.assign({}, parentMethod, {
+    tag: '</\w+>結尾標籤',
+    checkTagHead: function (tagArea) {
+        // debugger;
 
-console.dir(methodList);
+        let res;
+        if ((res = /<(\w+)\/?>$/.exec(tagArea)) != null) {
+
+            let clone = Object.assign({}, this);
+            clone.nodeName = res[1];
+            return clone;
+        }
+        return null;
+    },
+    findEndTag: function (i, tagArea, noCheckArea) {
+        // debugger;
+        this.test_1();
+        return (this._findEndTag_1(i, tagArea, noCheckArea));
+    }
+});
+
+methodList.push(method_obj);
 //---------------------------------
 method_obj = {
     tag: '<!-- -->',
