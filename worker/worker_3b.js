@@ -45,6 +45,9 @@
 
         s.workerPath;
 
+        // 需要額外載入的 script
+        s.scriptList;
+
     })(workerSetting);
     //--------------------------------------------------------------------------
     function normalFactory(_) {
@@ -68,9 +71,9 @@
         }
         //----------------------------
         // 對外的設定
-        (function () {
+        (function (fn) {
 
-            Object.defineProperty(workerCommand, 'maxWorkers', {
+            Object.defineProperty(fn, 'maxWorkers', {
                 enumerable: true,
                 configurable: true,
                 get: function () {
@@ -83,7 +86,7 @@
                 }
             });
             //------------------
-            Object.defineProperty(workerCommand, 'idleTime', {
+            Object.defineProperty(fn, 'idleTime', {
                 enumerable: true,
                 configurable: true,
                 get: function () {
@@ -94,7 +97,7 @@
                 }
             });
             //------------------
-            Object.defineProperty(workerCommand, 'scriptPath', {
+            Object.defineProperty(fn, 'scriptPath', {
                 enumerable: true,
                 configurable: true,
                 get: function () {
@@ -105,7 +108,7 @@
                 }
             });
             //------------------
-            Object.defineProperty(workerCommand, 'extensionPath', {
+            Object.defineProperty(fn, 'extensionPath', {
                 enumerable: true,
                 configurable: true,
                 get: function () {
@@ -116,7 +119,7 @@
                 }
             });
             //------------------
-            Object.defineProperty(workerCommand, 'workerPath', {
+            Object.defineProperty(fn, 'workerPath', {
                 enumerable: true,
                 configurable: true,
                 get: function () {
@@ -127,7 +130,7 @@
                 }
             });
             //------------------
-            Object.defineProperty(workerCommand, 'setting', {
+            Object.defineProperty(fn, 'setting', {
                 enumerable: true,
                 configurable: true,
                 get: function () {
@@ -137,7 +140,18 @@
 
                 }
             });
-        })();
+            //------------------
+            // worker 必須額外載入的 script
+            fn.importScripts = function (scriptList) {
+                let lsit = Array.isArray(scriptList) ? scriptList : [scriptList];
+
+                scriptList.forEach(function (s) {
+                    if (typeof (s) == 'string') {
+                        workerSetting.push(s);
+                    }
+                });
+            };
+        })(workerCommand);
 
         //======================================================================
         // 整合者
@@ -361,7 +375,8 @@
                 this.worker.postMessage({
                     id: (this.id),
                     scriptPath: (this.ceo.scriptPath),
-                    extensionPath: (this.ceo.extensionPath)
+                    extensionPath: (this.ceo.extensionPath),
+                    scriptList: (JSON.stringify(workerSetting.scriptList))
                 });
             };
             //------------------------------------------------------------------
