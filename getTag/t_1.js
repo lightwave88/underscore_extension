@@ -39,7 +39,7 @@ class X1 {
         let textArea = '';
 
         while ((_chart = content[i]) !== undefined) {
-            debugger;
+            // debugger;
 
             hasChecked = content.substring(0, i + 1);
             console.log(hasChecked);
@@ -130,8 +130,11 @@ class X1 {
         //------------------
         if (solution.length > 0) {
             if (solution.length > 1) {
-                solution = solution.sort(function (a, b) {
-                    return (a.level < b.level);
+                solution.sort(function (a, b) {
+                    let a_level = a.method.level;
+                    let b_level = b.method.level;
+                    let res = (a_level < b_level);
+                    return res;
                 });
             }
             // debugger;

@@ -1,7 +1,7 @@
 // debugger;
 const NodeClass = require('./t_2');
 // debugger;
-const {NormalNode, ScriptNode, TextNode, StyleNode} = require('./t_2');
+const { NormalNode, ScriptNode, TextNode, StyleNode } = require('./t_2');
 ///////////////////////////////////////////////////////////////////////////////
 //
 // 方法列表
@@ -52,30 +52,21 @@ class ProtoMethod {
         //-----------------------
         // 處理 <tag......>
         while ((_chart = content[j]) != null) {
-            debugger;
+            // debugger;
 
             let hasChecked = content.slice(i + 1, j + 1);
 
-            if (commandCount < 0) {
-                throw new Error('command error');
-            }
+
             //-----------------------
             // 只確認是否在 [''][""]之間
-            if (/['"]/.test(_chart)) {
+            if (_symbol) {
+                if (_symbol.test(_chart)) {
+                    // ['"]結尾
+                    commandCount--;
+                }
+            } else if (/['"]/.test(_chart)) {
 
-                if (commandCount > 0) {
-                    // 在 attr 命令之間
-                    if (false && _symbol_1.test(hasChecked)) {
-                        // 脫逸
-                        continue;
-                    }
-
-                    if (_symbol.test(_chart)) {
-                        // ['"]結尾
-                        commandCount--;
-                    }
-
-                } else {
+                if (commandCount == 0) {
                     // ['"]開頭
                     commandCount++;
                     _symbol = RegExp(_chart);
@@ -147,8 +138,19 @@ class Method_1 extends ProtoMethod {
         // debugger;
 
         let res;
-        if ((res = /<(\w+)(\s|>|\/>)$/.exec(tagArea)) != null) {
+        if ((res = /<(\w+)(\s|>|\/>)$/i.exec(tagArea)) != null) {
             let nodeName = res[1];
+
+            let _nodeName = nodeName.toLowerCase();
+
+            switch (_nodeName) {
+                // case 'style':
+                // case 'script':
+                // return null;
+                default:
+                    break;
+            }
+
 
             return {
                 method: Method_1,
@@ -251,7 +253,7 @@ class Method_3 extends ProtoMethod {
 }
 
 (function (fn) {
-    fn.level = 0;
+    fn.level = 5;
     //=================================
     fn.checkTagType = function (tagArea) {
         // debugger;
@@ -281,16 +283,16 @@ class Method_4 extends ProtoMethod {
     }
     //=================================
     find(i, tagArea, content) {
-        // debugger;
+        debugger;
         console.log(this.info);
-        
+
         let res;
         let d = {
             node: undefined,
             index: undefined
         };
         // 找開頭的 end
-        let {node, index} = this._findEndTag_1(i, tagArea, content);
+        let { node, index } = this._findEndTag_1(i, tagArea, content);
         //-----------------------
         // 找最後的 end
         if (node instanceof TextNode) {
@@ -300,13 +302,14 @@ class Method_4 extends ProtoMethod {
         } else {
             res = this._findEnd(index, content);
             index = res.index;
-        
-            let content = content.slice(i + 1, index + 1);
+
+            debugger;
+            let _content = content.slice(i + 1, index + 1);
 
             if (res.find) {
-                d.node = new StyleNode(content);
-            }else{
-                d.node = new TextNode(content);
+                d.node = new StyleNode(_content);
+            } else {
+                d.node = new TextNode(_content);
             }
 
             d.index = index;
@@ -318,12 +321,12 @@ class Method_4 extends ProtoMethod {
         let j = i + 1;
         let _chart;
 
-        let tagContent;
+
         // 指令區 {}
         let commandCount = 0;
         //------------------
         while ((_chart = content[j]) != null) {
-            tagContent = content.slice(i + 1, j + 1);
+
 
             if (/\{/.test(_chart)) {
                 commandCount++;
@@ -335,30 +338,30 @@ class Method_4 extends ProtoMethod {
                 // 在指令區 {} 內
                 // 指令區亂七八糟不鳥她
                 // 只管 }
-                continue;
+                // continue;
             } else {
                 // 不在指令區 {} 內
-                if (/</.test(tagContent)) {
+
+                if (/</.test(_chart)) {
+                    debugger;
                     // 遇到關鍵標籤
 
                     // 往後取樣
-                    let word = content.substr(j, 15);
+                    let word = content.substr(j + 1, 10);
 
                     if (/^\/style>/i.test(word)) {
                         // 遇到close
 
                         let index = word.search(/>/);
-                        index += (j - 1);
+                        index += (j + 1);
                         return {
                             find: true,
                             index: index
                         };
                     } else {
                         // 沒有正確 close
-                        return {
-                            find: false,
-                            index: (j - 1)
-                        };
+                        j--;
+                        break;
                     }
                 }
             }
@@ -366,6 +369,7 @@ class Method_4 extends ProtoMethod {
 
         } // end while
         //------------------
+        debugger;
         // 沒找到 close
         return {
             find: false,
@@ -406,54 +410,33 @@ class Method_5 extends ProtoMethod {
         // debugger;
         console.log(this.info);
 
-        let find;
-        let index;
         let res;
         let d = {
             node: undefined,
-            index: undefined,
-            content: undefined
+            index: undefined
         };
         // 找開頭的 end
-        res = this._findStartEnd(i, tagArea, content);
-        index = res.index;
+        let { node, index } = this._findEndTag_1(i, tagArea, content);
+        debugger;
         //-----------------------
         // 找最後的 end
-        if (!res.find) {
-            d.node = 'text';
+        if (node instanceof TextNode) {
+            d.node = node;
             d.index = index;
-            d.content = content.slice(i, index + 1);
         } else {
             res = this._findEnd(index, content);
             index = res.index;
 
-            d.node = 'text';
+            let _content = content.slice(i + 1, index + 1);
 
             if (res.find) {
-                d.node = this.nodeName;
+                d.node = new ScriptNode(_content);
+            } else {
+                d.node = new TextNode(_content);
             }
 
             d.index = index;
-            d.content = (content.slice(i + 1, index + 1));
         }
-        return d;
-    }
-    //=================================
-    // 找尋開頭的 close位置
-    _findStartEnd(i, tagArea, content) {
-        debugger;
-
-        let res = this._findEndTag_1(i, tagArea, content);
-
-        let d = {
-            res: true,
-            index: (res.index)
-        };
-
-        if (res.node == 'text') {
-            d.res = false;
-        }
-
         return d;
     }
     //=================================
@@ -461,61 +444,90 @@ class Method_5 extends ProtoMethod {
         let j = i + 1;
         let _chart;
 
-        let tagContent;
+        let preContent;
         // 指令區 {}
-        let commandCount = 0;
+        let commandCount_1 = 0;
+        // 注釋區
+        let commandCount_2 = 0;
 
         let _symbol;
         // _symbol的脫逸
-        let _symbol_1 = /\\[`'"]$/;
+        let _symbol_1;
 
         //------------------
-        while ((_chart = content[j++]) != null) {
+        while ((_chart = content[j]) != null) {
 
-            tagContent = content.slice(i + 1, j);
+            let preContent = content.slice(j - 3, j + 1);
 
-            if (commandCount > 0) {
-                // 在[`'"]中
+            if (commandCount_1 > 0) {
+                debugger;
+                // 在文字區中
+                if (_symbol_1.test(preContent)) {
+                    // 脫逸
+                    j++;
+                    continue;
+                }
 
                 if (_symbol.test(_chart)) {
                     // 遇到分隔符號
-                    if (_symbol_1.test(tagContent)) {
-                        // 脫逸
-                        continue;
-                    } else {
-                        commandCount--;
-                    }
+                    commandCount_1--;
                 }
 
-            } else {
+            } else if(commandCount_2 > 0){
+                // 註釋區
+                debugger;
+
+                if(_symbol.test(preContent)){
+                    commandCount_2--;
+                    _symbol = undefined;
+                }
+            }else {
+                debugger;
+                // 非特異區
                 _symbol = undefined;
                 _symbol_1 = undefined;
 
-                if (/[`'"]/.test(_chart)) {
-                    commandCount++;
-                    _symbol = RegExp(_chart);
-                    _symbol_1 = RegExp(`\\${_chart}`);
+                if (/</.test(_chart)) {
+                    // 遇到 <
 
-                } else if (/</.test(_chart)) {
                     // 往後取樣
-                    let word = content.substr(j, 15);
+                    let word = content.substr(j + 1, 10);
 
                     if (/^\/script>/.test(word)) {
+                        // 正解
+
                         let index = word.search(/>/);
-                        index += (j - 1);
+                        index += (j + 1);
                         return {
                             find: true,
                             index: index
                         };
                     } else {
-                        return {};
+                        // 沒有正確 close
+                        j--;
+                        break;
                     }
+                } else if (/[`'"]/.test(_chart)) {
+                    // 文字區
+                    commandCount_1++;
+                    _symbol = RegExp(_chart);
+                    _symbol_1 = RegExp(`\\\\${_chart}$`);
+
+                }else if(/\/\/$/.test(preContent)){
+                    // 註釋區
+                    commandCount_2++;
+
+                    // 換行符號
+                    _symbol = /(\r\n|\n)$/;
                 }
             }
-
+            j++;
         } // while end
         //------------------
-        return {};
+        return {
+            find: false,
+            index: j
+        };
     }
 }
 
@@ -539,3 +551,52 @@ class Method_5 extends ProtoMethod {
 })(Method_5);
 
 methodList.push(Method_5);
+///////////////////////////////////////////////////////////////////////////////
+class Method_6 extends ProtoMethod{
+    constructor(nodeName){
+        super(nodeName);
+        this.info = '<!\w+>特殊開頭標籤';
+    }
+    //=================================
+    find(i, tagArea, content) {
+        debugger;
+
+        console.log(this.info);
+
+        let res = this._findEndTag_1(i, tagArea, content);
+        return res;
+    }
+}
+(function (fn) {
+    // 優先等級
+    fn.level = 0;
+    //=================================
+    fn.checkTagType = function (tagArea) {
+        // debugger;
+
+        let res;
+        if ((res = /<[!]?(\w+)(\s|>|\/>)$/i.exec(tagArea)) != null) {
+            let nodeName = res[1];
+
+            let _nodeName = nodeName.toLowerCase();
+
+            switch (_nodeName) {
+                // case 'style':
+                // case 'script':
+                // return null;
+                default:
+                    break;
+            }
+
+
+            return {
+                method: Method_1,
+                nodeName: nodeName
+            };
+        }
+        return null;
+    };
+})(Method_6);
+
+methodList.push(Method_6);
+///////////////////////////////////////////////////////////////////////////////
