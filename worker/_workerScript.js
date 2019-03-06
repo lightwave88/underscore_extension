@@ -32,6 +32,7 @@ self.addEventListener('message', function (e) {
         scriptList.unshift(extensionPath);
 
         if (scriptPath) {
+            debugger;
             console.log('worker(%s)> import script', id);
             // 初始化
             try {
@@ -43,10 +44,11 @@ self.addEventListener('message', function (e) {
             $_ = self._;
 
             scriptList.forEach(function (_path) {
+                debugger;
                 try {
                     importScripts(_path);
                 } catch (error) {
-                    throw new Error('script(' + scriptPath + ')  load error');
+                    throw new Error('script(' + _path + ')  load error');
                 }
             });
 

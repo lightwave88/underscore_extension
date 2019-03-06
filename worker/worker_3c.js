@@ -46,7 +46,7 @@
         s.workerPath;
 
         // 需要額外載入的 script
-        s.scriptList;
+        s.scriptList = [];
 
     })(workerSetting);
     //--------------------------------------------------------------------------
@@ -142,14 +142,12 @@
             });
             //------------------
             // worker 必須額外載入的 script
-            fn.importScripts = function(scriptList) {
-                let lsit = Array.isArray(scriptList) ? scriptList : [scriptList];
+            fn.importScript = function(script) {
+                if(typeof(script) != 'string'){
+                    throw new TypeError('_.worker.importScript arg must be string');
+                }
 
-                scriptList.forEach(function(s) {
-                    if (typeof(s) == 'string') {
-                        workerSetting.push(s);
-                    }
-                });
+                workerSetting.scriptList.push(script);
             };
         })(workerCommand);
 
