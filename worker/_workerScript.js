@@ -13,13 +13,14 @@ self.addEventListener('message', function (e) {
     console.log('worker> get web message');
 
     let data = e.data || {};
-    //----------------------------            
+    //----------------------------
     let scriptPath = data['scriptPath'] || null;
     let extensionPath = data["extensionPath"] || null;
     let command = data['command'] || '';
     let args = data.args || [];
     let id = data.id || 0;
     let scriptList = data['scriptList'] || null;
+    let jobID = data['jobID'] || null;
 
     //----------------------------
     // load _.script
@@ -58,8 +59,8 @@ self.addEventListener('message', function (e) {
     } else {
         // worker 接運算任務
         // debugger;
-
-        console.log('worker(%s)> do job', id);
+        console.dir(data);
+        console.log('worker(%s)> do job(%s)', id, jobID);
 
         if (!command && typeof $_[command] !== 'function') {
             throw new TypeError('no assign fun');
@@ -67,11 +68,23 @@ self.addEventListener('message', function (e) {
         // debugger;
         // _ 的運算
         let res = $_[command].apply($_, args);
-        //----------------------------        
-        self.postMessage({
-            res: res
+        //----------------------------
+
+        test_1().then(function(){
+            self.postMessage({
+                res: res
+            });
         });
+
     }
 
     console.log('---------------');
 });
+
+function test_1(){
+    return new Promise(function(_s, _j){
+        setTimeout(function() {
+            _s();
+        }, 1000);
+    });
+}
