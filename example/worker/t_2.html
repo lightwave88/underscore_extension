@@ -16,7 +16,7 @@
         let rootPath = location.href.replace(/\/[^/]*$/, '/');
 
         // 要新加入對 _ 的擴充(無法用相對路徑)
-        let path = rootPath + 'extension_file_1.js';
+        let path = location.href + '/../extension_file_1.js';
 
         _.worker.importScript(path);
 
