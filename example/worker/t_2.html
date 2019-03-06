@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script src="./data/taipeiHotelData.js"></script>
+    <script id="script_1" src="../../js_lib/underscore-1.9.1.js"></script>
+    <script src="../../js_lib/_extension1/_extension1.php"></script>
+    <script src="./extension_file_1.js"></script>
+    <script>
+        // 設置 worker script 的位置
+        _.worker.workerPath = '../../js_lib/_extension1/worker/_workerScript.js';
+        let rootPath = location.href.replace(/\/[^/]*$/, '/');
+
+        // 要新加入對 _ 的擴充(無法用相對路徑)
+        let path = rootPath + 'extension_file_1.js';
+
+        _.worker.importScript(path);
+
+        console.dir(_);
+        // 取得 worker 各項參數數值
+        console.dir(_.worker.setting);
+
+
+        function t_1() {
+            let p = _.worker('g1', {
+                age: 18
+            });
+
+            p.then(function(data) {
+                console.log(data);
+            }, function(err) {
+                console.dir(err);
+            });
+
+        }
+    </script>
+</head>
+
+<body>
+    <div>
+        <button onclick="t_1()">test_1</button>
+    </div>
+</body>
+
+</html>
