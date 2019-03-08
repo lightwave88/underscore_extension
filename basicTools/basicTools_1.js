@@ -14,14 +14,14 @@
                 factory(obj);
             };
         } else {
-            if(g._ != null){
+            if (g._ != null) {
                 factory(g._);
             }
         }
     }());
     //--------------------------------------------------------------------------
     function factory(_) {
-        
+
         //----------------------------
 
         if (_.defineProperty == null) {
@@ -94,10 +94,10 @@
             });
         }
         //----------------------------
-        if (_.waitJob == null) {
+        if (_.timeout == null) {
             _.mixin({
                 // 等待一個任務並設下時限
-                waitJob: function (job, timeLimit) {
+                timeout: function (job, timeLimit) {
                     let _res;
                     let _rej;
 
@@ -113,12 +113,12 @@
                         p2 = job();
 
                         if (!(p2 instanceof Promise)) {
-                            _rej("waitJob arg[0] must return promise");
+                            _rej("timeout arg[0] must return promise");
                         }
                     } else if (job instanceof Promise) {
                         p2 = job;
                     } else {
-                        _rej("waitJob arg[0] must be promise or function return promise");
+                        _rej("timeout arg[0] must be promise or function return promise");
                     }
                     //-----------------------
 
