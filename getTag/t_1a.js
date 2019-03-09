@@ -1,18 +1,17 @@
 // debugger;
 const $util = require('util');
 
-const NodeClass = require('./t_2');
-// debugger;
 const {
-    NormalNode: NormalNode,
-    ScriptNode: ScriptNode,
-    TextNode: TextNode,
-    StyleNode: StyleNode,
-    UnknowNode, UnknowNode,
-    EndNode: EndNode
-} = NodeClass;
+    NormalNode,
+    EndNode,
+    TextNode,
+    StyleNode,
+    UnknowNode,
+    CommentNode,
+    ScriptNode,
+} = require('./t_2');
 // debugger;
-const methodList = require('./t_3b');
+const methodList = require('./t_3c');
 
 
 
@@ -71,7 +70,7 @@ class Main {
                     // 在 attr 外
                     // 取樣判斷是否進入 attr
                     let checkWord = content.slice(i - 1, i + 1);
-                    let res = /=(["'])$/.test(checkWord);
+                    let res = /=(["'])$/.exec(checkWord);
 
                     if (res != null) {
                         //進入 attr
@@ -120,7 +119,7 @@ class Main {
                     }
                 }
                 //------------------
-                if (inAttr < 1 && />/.test) {
+                if (inAttr < 1 && />/.test(_chart)) {
                     // 標籤結尾
                     // 沒有被辨識出的標籤
                     tagStartIndex = undefined;

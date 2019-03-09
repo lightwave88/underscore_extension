@@ -1,6 +1,6 @@
-debugger;
+// debugger;
 
-const o = require('./t_1');
+const o = require('./t_1a');
 
 
 

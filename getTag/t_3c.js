@@ -3,12 +3,12 @@ const NodeClass = require('./t_2');
 // debugger;
 const {
     NormalNode,
-    ScriptNode,
+    EndNode,
     TextNode,
     StyleNode,
     UnknowNode,
-    EndNode,
-    CommentNode
+    CommentNode,
+    ScriptNode,
 } = require('./t_2');
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -53,9 +53,10 @@ class ProtoMethod {
 
             resContent = content.slice(i + 1, j + 1);
             return {
-                node: (new NormalNode(this.nodeName, resContent)),
+                "$content": resContent,
+                node: (this.nodeName),
                 index: j
-            }
+            };
         }
         //-----------------------
         // 處理 <tag......>
@@ -141,7 +142,7 @@ class Method_1 extends ProtoMethod {
         //-------------
         return {
             index: index,
-            node:
+            node: node
         };
     }
 
@@ -189,10 +190,13 @@ class Method_2 extends ProtoMethod {
         if(/^text$/.test(node)){
             node = new TextNode($content);
         }else{
-            node = new NormalNode(node, $content)
+            node = new EndNode(node, $content)
         }
 
-        return res;
+        return {
+            index: index,
+            node: node
+        };
     }
 }
 
@@ -604,7 +608,7 @@ class Method_6 extends ProtoMethod {
 
         return {
             index: index,
-            node:
+            node: node
         };
     }
 }
