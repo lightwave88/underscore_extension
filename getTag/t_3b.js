@@ -1,7 +1,13 @@
 // debugger;
 const NodeClass = require('./t_2');
 // debugger;
-const { NormalNode, ScriptNode, TextNode, StyleNode } = require('./t_2');
+const {
+    NormalNode,
+    ScriptNode,
+    TextNode,
+    StyleNode,
+    UnknowNode
+} = require('./t_2');
 ///////////////////////////////////////////////////////////////////////////////
 //
 // 方法列表
@@ -59,14 +65,15 @@ class ProtoMethod {
 
             //-----------------------
             // 只確認是否在 [''][""]之間
-            if (_symbol) {
+            if (commandCount > 0) {
+                // 在 attr 之中
                 if (_symbol.test(_chart)) {
                     // ['"]結尾
                     commandCount--;
                 }
-            } else if (/['"]/.test(_chart)) {
-
-                if (commandCount == 0) {
+            } else{
+                // 在 attr 之外
+                 if (/['"]/.test(_chart)) {
                     // ['"]開頭
                     commandCount++;
                     _symbol = RegExp(_chart);
@@ -116,13 +123,12 @@ class Method_1 extends ProtoMethod {
 
     constructor(nodeName) {
         super(nodeName);
-        this.info = '<tag...>一般標籤';
     }
     //=================================
     find(i, tagArea, content) {
         debugger;
 
-        console.log(this.info);
+        // console.log(this.info);
 
         let res = this._findEndTag_1(i, tagArea, content);
         return res;
@@ -133,6 +139,8 @@ class Method_1 extends ProtoMethod {
 (function (fn) {
     // 優先等級
     fn.level = 0;
+
+    fn.info = '<tag...>一般標籤';
     //=================================
     fn.checkTagType = function (tagArea) {
         // debugger;
@@ -168,14 +176,14 @@ class Method_2 extends ProtoMethod {
 
     constructor(nodeName) {
         super(nodeName);
-        this.info = '</tag>一般標籤尾';
+
         methodList.push(Method_2);
     }
     //=================================
     find(i, tagArea, content) {
         debugger;
 
-        console.log(this.info);
+        // console.log(this.info);
 
         let res = this._findEndTag_1(i, tagArea, content);
         return res;
@@ -185,6 +193,8 @@ class Method_2 extends ProtoMethod {
 
 (function (fn) {
     fn.level = 0;
+
+    fn.info = '</tag>一般標籤尾';
     //=================================
     fn.checkTagType = function (tagArea) {
         // debugger;
@@ -207,14 +217,14 @@ methodList.push(Method_2);
 class Method_3 extends ProtoMethod {
     constructor(nodeName) {
         super(nodeName);
-        this.info = '<!-- -->一般標籤尾';
+
         methodList.push(Method_3);
     }
     //=================================
     find(i, tagArea, content) {
         debugger;
 
-        console.log(this.info);
+        // console.log(this.info);
 
         let resContent;
         let j = i + tagArea.length + 1;
@@ -254,6 +264,8 @@ class Method_3 extends ProtoMethod {
 
 (function (fn) {
     fn.level = 5;
+
+    fn.info = '<!-- -->';
     //=================================
     fn.checkTagType = function (tagArea) {
         // debugger;
@@ -278,13 +290,13 @@ methodList.push(Method_3);
 class Method_4 extends ProtoMethod {
     constructor(nodeName) {
         super(nodeName);
-        this.info = '<style...>不會有套嵌好辦</style>';
+
         methodList.push(Method_4);
     }
     //=================================
     find(i, tagArea, content) {
         debugger;
-        console.log(this.info);
+        // console.log(this.info);
 
         let res;
         let d = {
@@ -381,6 +393,8 @@ class Method_4 extends ProtoMethod {
 (function (fn) {
     fn.level = 5;
 
+    fn.info = '<style...>不會有套嵌好辦</style>';
+
     fn.checkTagType = function (tagArea) {
         // debugger;
 
@@ -402,13 +416,13 @@ methodList.push(Method_4);
 class Method_5 extends ProtoMethod {
     constructor(nodeName) {
         super(nodeName);
-        this.info = '<script...>不會有套嵌好辦</script>';
+
         methodList.push(Method_5);
     }
     //=================================
     find(i, tagArea, content) {
         // debugger;
-        console.log(this.info);
+        // console.log(this.info);
 
         let res;
         let d = {
@@ -417,6 +431,8 @@ class Method_5 extends ProtoMethod {
         };
         // 找開頭的 end
         let { node, index } = this._findEndTag_1(i, tagArea, content);
+        let content_start = index - i - 1;
+
         debugger;
         //-----------------------
         // 找最後的 end
@@ -431,6 +447,7 @@ class Method_5 extends ProtoMethod {
 
             if (res.find) {
                 d.node = new ScriptNode(_content);
+                d.node.setStartEnd(content_start);
             } else {
                 d.node = new TextNode(_content);
             }
@@ -473,15 +490,15 @@ class Method_5 extends ProtoMethod {
                     commandCount_1--;
                 }
 
-            } else if(commandCount_2 > 0){
+            } else if (commandCount_2 > 0) {
                 // 註釋區
                 debugger;
 
-                if(_symbol.test(preContent)){
+                if (_symbol.test(preContent)) {
                     commandCount_2--;
                     _symbol = undefined;
                 }
-            }else {
+            } else {
                 debugger;
                 // 非特異區
                 _symbol = undefined;
@@ -513,7 +530,7 @@ class Method_5 extends ProtoMethod {
                     _symbol = RegExp(_chart);
                     _symbol_1 = RegExp(`\\\\${_chart}$`);
 
-                }else if(/\/\/$/.test(preContent)){
+                } else if (/\/\/$/.test(preContent)) {
                     // 註釋區
                     commandCount_2++;
 
@@ -534,6 +551,8 @@ class Method_5 extends ProtoMethod {
 (function (fn) {
     fn.level = 5;
 
+    fn.info = '<script...>不會有套嵌好辦</script>';
+
     fn.checkTagType = function (tagArea) {
         // debugger;
 
@@ -552,16 +571,16 @@ class Method_5 extends ProtoMethod {
 
 methodList.push(Method_5);
 ///////////////////////////////////////////////////////////////////////////////
-class Method_6 extends ProtoMethod{
-    constructor(nodeName){
+class Method_6 extends ProtoMethod {
+    constructor(nodeName) {
         super(nodeName);
-        this.info = '<!\w+>特殊開頭標籤';
+
     }
     //=================================
     find(i, tagArea, content) {
         debugger;
 
-        console.log(this.info);
+        // console.log(this.info);
 
         let res = this._findEndTag_1(i, tagArea, content);
         return res;
@@ -569,13 +588,15 @@ class Method_6 extends ProtoMethod{
 }
 (function (fn) {
     // 優先等級
-    fn.level = 0;
+    fn.level = 5;
+
+    fn.info = '<!\w+>特殊開頭標籤';
     //=================================
     fn.checkTagType = function (tagArea) {
         // debugger;
 
         let res;
-        if ((res = /<[!]?(\w+)(\s|>|\/>)$/i.exec(tagArea)) != null) {
+        if ((res = /<[!](\w+)(\s|>|\/>)$/i.exec(tagArea)) != null) {
             let nodeName = res[1];
 
             let _nodeName = nodeName.toLowerCase();
@@ -590,7 +611,7 @@ class Method_6 extends ProtoMethod{
 
 
             return {
-                method: Method_1,
+                method: Method_6,
                 nodeName: nodeName
             };
         }
