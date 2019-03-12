@@ -51,7 +51,7 @@ class ProtoMethod {
         if (/(>|\/>)$/.test(tagArea)) {
             j = i + tagArea.length;
 
-            resContent = content.slice(i + 1, j + 1);
+            resContent = content.substring(i + 1, j + 1);
             return {
                 "$content": resContent,
                 node: (this.nodeName),
@@ -62,8 +62,8 @@ class ProtoMethod {
         // 處理 <tag......>
         while ((_chart = content[j]) != null) {
             // debugger;
-
-            let hasChecked = content.slice(i + 1, j + 1);
+            // let k = (i < 0) ? 0 : i;
+            let hasChecked = content.substring(i, j + 1);
 
 
             //-----------------------
@@ -74,10 +74,13 @@ class ProtoMethod {
                     // ['"]結尾
                     commandCount--;
                 }
-            } else{
+            } else {
                 // 在 attr 之外
 
-                if (/=['"]$/.test(hasChecked)) {
+                // 這判別比較麻煩
+                // 可以再深入些(/, > ,\s)= 都會有問題
+
+                if (/\s\S+?=['"]$/.test(hasChecked)) {
                     // ['"]開頭
                     commandCount++;
                     _symbol = RegExp(_chart);
@@ -98,7 +101,7 @@ class ProtoMethod {
                 } else if (/>/.test(_chart)) {
                     // 找到結尾
 
-                    resContent = content.slice(i + 1, j + 1);
+                    resContent = content.substring(i + 1, j + 1);
                     return {
                         "$content": resContent,
                         node: (this.nodeName),
@@ -112,7 +115,7 @@ class ProtoMethod {
         //-----------------------
         // 沒找到結尾
         // 結果是 textNode
-        resContent = content.slice(i + 1, j + 1);
+        resContent = content.substring(i + 1, j + 1);
         return {
             "$content": resContent,
             node: 'text',
@@ -130,13 +133,13 @@ class Method_1 extends ProtoMethod {
     }
     //=================================
     find(i, tagArea, content) {
-        debugger;
+        // debugger;
 
-        let {node, $content, index} = this._findEndTag_1(i, tagArea, content);
+        let { node, $content, index } = this._findEndTag_1(i, tagArea, content);
 
-        if(/^text$/.test(node)){
+        if (/^text$/.test(node)) {
             node = new TextNode($content);
-        }else{
+        } else {
             node = new NormalNode(node, $content)
         }
         //-------------
@@ -183,13 +186,13 @@ class Method_2 extends ProtoMethod {
     }
     //=================================
     find(i, tagArea, content) {
-        debugger;
+        // debugger;
 
-        let {node, $content, index} = this._findEndTag_1(i, tagArea, content);
+        let { node, $content, index } = this._findEndTag_1(i, tagArea, content);
 
-        if(/^text$/.test(node)){
+        if (/^text$/.test(node)) {
             node = new TextNode($content);
-        }else{
+        } else {
             node = new EndNode(node, $content)
         }
 
@@ -234,7 +237,7 @@ class Method_3 extends ProtoMethod {
     }
     //=================================
     find(i, tagArea, content) {
-        debugger;
+        // debugger;
 
         // console.log(this.info);
 
@@ -243,9 +246,9 @@ class Method_3 extends ProtoMethod {
         let _chart;
         //------------------
         while ((_chart = content[j]) != null) {
-            debugger;
+            // debugger;
 
-            let tagContent = content.slice(i + 1, j + 1);
+            let tagContent = content.substring(i + 1, j + 1);
             //------------------
             if (/</.test(_chart)) {
                 // 沒有正確 close
@@ -254,7 +257,7 @@ class Method_3 extends ProtoMethod {
             //------------------
             if (/-->$/.test(tagContent)) {
 
-                resContent = content.slice(i + 1, j + 1);
+                resContent = content.substring(i + 1, j + 1);
                 // close
                 return {
                     node: new CommentNode(resContent),
@@ -265,7 +268,7 @@ class Method_3 extends ProtoMethod {
             j++;
         } // end while
         //------------------
-        resContent = content.slice(i + 1, j + 1);
+        resContent = content.substring(i + 1, j + 1);
 
         return {
             node: new TextNode(resContent),
@@ -317,8 +320,10 @@ class Method_4 extends ProtoMethod {
             index: undefined
         };
         // 找開頭的 end
-        let {node, $content, index} = this._findEndTag_1(i, tagArea, content);
+        let { node, $content, index } = this._findEndTag_1(i, tagArea, content);
         //-----------------------
+        debugger;
+
         // 找最後的 end
         if (/^text$/.test(node)) {
             // 沒找到 style
@@ -329,7 +334,7 @@ class Method_4 extends ProtoMethod {
             index = res.index;
 
             debugger;
-            let _content = content.slice(i + 1, index + 1);
+            let _content = content.substring(i + 1, index + 1);
 
             if (res.find) {
                 d.node = new StyleNode(_content);
@@ -444,7 +449,7 @@ class Method_5 extends ProtoMethod {
             index: undefined
         };
         // 找開頭的 end
-        let { node, index, $content} = this._findEndTag_1(i, tagArea, content);
+        let { node, index, $content } = this._findEndTag_1(i, tagArea, content);
         let content_start = index - i - 1;
 
         debugger;
@@ -457,7 +462,7 @@ class Method_5 extends ProtoMethod {
             res = this._findEnd(index, content);
             index = res.index;
 
-            let _content = content.slice(i + 1, index + 1);
+            let _content = content.substring(i + 1, index + 1);
 
             if (res.find) {
                 d.node = new ScriptNode(_content);
@@ -488,7 +493,7 @@ class Method_5 extends ProtoMethod {
         //------------------
         while ((_chart = content[j]) != null) {
 
-            let preContent = content.slice(j - 3, j + 1);
+            let preContent = content.substring(j - 3, j + 1);
 
             if (commandCount_1 > 0) {
                 debugger;
@@ -597,12 +602,12 @@ class Method_6 extends ProtoMethod {
 
         // console.log(this.info);
 
-        let {index, $content, node} = this._findEndTag_1(i, tagArea, content);
+        let { index, $content, node } = this._findEndTag_1(i, tagArea, content);
 
-        if(/^text$/.test(node)){
+        if (/^text$/.test(node)) {
             node = new TextNode($content);
-        }else{
-            node = NormalNode(node, $content);
+        } else {
+            node = new NormalNode(node, $content);
         }
 
 
@@ -622,7 +627,7 @@ class Method_6 extends ProtoMethod {
         // debugger;
 
         let res;
-        if ((res = /<[!](\w+)(\s|>|\/>)$/i.exec(tagArea)) != null) {
+        if ((res = /<([!]\w+)(\s|>|\/>)$/i.exec(tagArea)) != null) {
             let nodeName = res[1];
 
             let _nodeName = nodeName.toLowerCase();
