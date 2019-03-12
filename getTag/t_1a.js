@@ -51,7 +51,7 @@ class Main {
 
         //-----------------------
         while ((_chart = content[i]) !== undefined) {
-            debugger;
+            // debugger;
 
             console.log('-------');
             hasCheckedContent = content.substring(0, i + 1);
@@ -96,7 +96,7 @@ class Main {
                     let m = this._checkTagSolution(tagArea);
 
                     if (m != null) {
-                        debugger;
+                        // debugger;
 
                         // 若確定 tagName
                         // 找出是否有特殊的處理方式
@@ -187,8 +187,7 @@ class Main {
                 solution.sort(function (a, b) {
                     let a_level = a.method.level;
                     let b_level = b.method.level;
-                    let res = (a_level < b_level);
-                    return res;
+                    return (b_level - a_level);
                 });
             }
 
