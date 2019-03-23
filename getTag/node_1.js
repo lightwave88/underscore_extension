@@ -1,16 +1,24 @@
 // debugger;
 
 class Node {
-    constructor(nodeName, content) {
-        this.nodeName = nodeName;
-        this.source = content;
+    // tagName: 標簽名
+    // source: 所有內文
+    // head: 標籤頭
+    // content: 標籤內容
+    // end: 標籤尾
+    constructor(tagName, source) {
+        this.isEnd = false;
+        this.tagName = tagName;
+        this.source = source;
         //------------------
         // 用來判別是否是特殊要用的標籤
-        this.category;
-        this.content;
+        this.tag_head;
+        this.tag_content;
+        this.tag_end;
+
     }
     toString() {
-        return `[${this.nodeName}]${this.content}`;
+        return `(${this.tag_head}${this.tag_content}${this.tag_end})`;
     }
 
     print() {
@@ -19,46 +27,57 @@ class Node {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// 一般節點
 class NormalNode extends Node {
 
 }
 ////////////////////////////////////////////////////////////////////////////////
 // 結尾節點
 class EndNode extends Node {
+    constructor(tagName, source) {
+        super(tagName, source);
 
+        this.isEnd = true;
+    }
 }
 ////////////////////////////////////////////////////////////////////////////////
 class TextNode extends Node {
-    constructor(content) {
-        super('text', content);
+    constructor(source) {
+        super('text', source);
+    }
+    //---------------------------------
+    // TextNode 合併
+    merge(node) {
+        if (!(node instanceof TextNode)) {
+            throw new TypeError('node must instanceof TextNode');
+        }
+        let sourece = this.source + node.source;
+        return (new TextNode(source));
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
 // style
 class StyleNode extends Node {
-    constructor(content) {
-        super('style', content);
-    }
-}
-////////////////////////////////////////////////////////////////////////////////
-
-// 無法判別的 node
-class UnknowNode extends Node {
-    constructor(content) {
-        super(null, content);
-    }
 }
 ////////////////////////////////////////////////////////////////////////////////
 class ScriptNode extends Node {
-    constructor(content) {
-        super('script', content);
+    constructor(source, head, content, end) {
+        super('script', source, head, content, end);
+
+        if (head) {
+            this.tag_head = head;
+        }
+        if (content) {
+            this.tag_content = content;
+        }
+
+        if (end) {
+            this.tag_end = end;
+        }
+
         this.type;
-        this.startEnd;
-    }
-    //---------------------------------
-    setStartEnd(index) {
-        this.startEnd = index;
-        this._checkType();
+
+        // this._checkType();
     }
     //---------------------------------
     print() {
@@ -90,10 +109,6 @@ let o = {
     EndNode: EndNode,
     TextNode: TextNode,
     StyleNode: StyleNode,
-    UnknowNode: UnknowNode,
-    CommentNode: CommentNode,
     ScriptNode: ScriptNode,
 };
 module.exports = o;
-
-
