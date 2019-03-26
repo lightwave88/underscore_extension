@@ -1,3 +1,5 @@
+const $util = require('util');
+
 // debugger;
 
 class Node {
@@ -13,12 +15,20 @@ class Node {
         //------------------
         // 用來判別是否是特殊要用的標籤
         this.tag_head;
-        this.tag_content;
-        this.tag_end;
+        this.tag_middle;
+        this.tag_foot;
 
     }
-    toString() {
-        return `(${this.tag_head}${this.tag_content}${this.tag_end})`;
+    toJSON() {
+        let res;
+
+        if (this.tag_middle != null) {
+            res = `${this.tag_head || ''}${this.tag_middle}${this.tag_foot || ''}`;
+        } else {
+            res = this.source;
+        }
+
+        return res;
     }
 
     print() {
@@ -58,24 +68,32 @@ class TextNode extends Node {
 ////////////////////////////////////////////////////////////////////////////////
 // style
 class StyleNode extends Node {
+    constructor(source) {
+        super('style', source);
+    }
 }
 ////////////////////////////////////////////////////////////////////////////////
 class ScriptNode extends Node {
-    constructor(source, head, content, end) {
-        super('script', source, head, content, end);
+    constructor(source, head, middle, foot) {
+        // console.log($util.inspect(arguments));
+
+        super('script', source);
 
         if (head) {
+            // console.log('head(%s)', head);
             this.tag_head = head;
         }
-        if (content) {
-            this.tag_content = content;
+        if (middle) {
+            this.tag_middle = middle;
         }
 
-        if (end) {
-            this.tag_end = end;
+        if (foot) {
+            this.tag_foot = foot;
         }
 
         this.type;
+
+        console.log(`script: head(%s) middle(%s) foot(%s)`, this.tag_head, this.tag_middle, this.tag_foot);
 
         // this._checkType();
     }

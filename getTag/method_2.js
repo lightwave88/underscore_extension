@@ -10,7 +10,7 @@ const methodList = {};
 module.exports = methodList;
 
 
-(function () {
+(function (methodList) {
     // 處理 style
     let $o = {};
 
@@ -97,9 +97,9 @@ module.exports = methodList;
     };
     //=================================
 
-})();
+})(methodList);
 ////////////////////////////////////////////////////////////////////////////////
-(function () {
+(function (methodList) {
     // 處理 script
     let $o = {};
 
@@ -109,7 +109,7 @@ module.exports = methodList;
         // debugger;
         // console.log(this.info);
 
-        let rightSide = _content.substrin(i);
+        let rightSide = _content.substring(i);
 
         let res;
         let r_value = {
@@ -117,48 +117,61 @@ module.exports = methodList;
             index: null,
             content: null
         };
-        // 找開頭的 end
+
         // 找開頭的 end
         let { content, index, find } = $Tools.findTagEnd(rightSide, 0);
 
-        // 相對座標
+        // headTag 座標內容
+        let headContent = content;
         let startEnd_i = index;
 
         debugger;
         //-----------------------
         if (!find) {
-            r_value.node = new TextNode(content);
-            r_value.index = index + 1;
+            // script.head error
+            r_value.node = new $NodeClass.TextNode(headContent);
+            r_value.index = index + i;
         } else {
-            // 找最後的 end
-            res = this._findEnd(rightSide, index);
+            // script.head ok
+            // find  script.end
+            res = this._findScriptEnd(rightSide, index);
+
             index = res.index;
             find = res.find;
-            content = res.content;
 
+            let tagContent = rightSide.substring(0, index+1);
+
+            r_value.index = index+i;
+            //------------------
             // 相對座標
-            let endStart_i = this._findendStart(content);
+            let endStart_i = this._findendStart(tagContent);
 
             if (find) {
+                // 確定 script all ok
+                let tag_haed = headContent;
+                let tag_content = tagContent.substring(startEnd_i + 1, endStart_i);
+                let tag_foot = tagContent.substring(endStart_i);
 
-                let tag_haed = content.substrin(0, startEnd_i + 1);
-
-                let tag_content = content.substring(startEnd + 1, endStart_i);
-                let tag_end = content.substring(endStart_i);
-
-                r_value.node = new ScriptNode(content, tag_haed, tag_content, tag_end);
+                r_value.node = new $NodeClass.ScriptNode(tagContent, tag_haed, tag_content, tag_foot);
 
             } else {
-                r_value.node = new TextNode(_content);
+                // script tag error
+                r_value.node = new $NodeClass.TextNode(_content);
             }
 
-            r_value.index = index;
+
         }
         return r_value;
     }
     //=================================
-    $o._findEnd = function (content, i) {
-        let j = i + 1;
+    $o._findScriptEnd = function (content, i) {
+
+        let j = i;
+
+        if(/>/.test(content[i])){
+            j = i + 1;
+        }
+
         let _chart;
 
         let preContent;
@@ -248,8 +261,18 @@ module.exports = methodList;
     };
     //=================================
     $o._findendStart = function (content) {
-        let index = content.lastIndexOf('<');
-        return index;
+        return (content.search(/<\/script>$/i));
     };
 
-})();
+})(methodList);
+////////////////////////////////////////////////////////////////////////////////
+(function(methodList){
+    // 處理 <% %>
+    let $o = {};
+
+    methodList['%'] = $o;
+    //=================================
+    $o.solution = function (_content, i) {
+
+    };
+})(methodList);
