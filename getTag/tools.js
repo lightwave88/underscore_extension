@@ -15,8 +15,8 @@ module.exports = Tools;
     // i: < 在 content 中的位置
     $o.findTagEnd = function (content, i) {
         debugger;
-
-        console.log('*****findTagEnd>> 找尋標籤結尾標籤*****');
+        console.log('**********');
+        console.log('findTagEnd>> 找尋標籤結尾標籤');
 
         let _chart;
 
@@ -44,14 +44,12 @@ module.exports = Tools;
             // debugger;
 
             hasChecked += _chart;
-
-            console.log('findTagEnd>> hasChecked(%s)', hasChecked);
             //-----------------------
             // 只確認是否在 [''][""]之間
             if (_symbol != null) {
                 // 在 attr 之中
                 if (_symbol.test(_chart)) {
-                    console.log('out attr(%s)', _symbol.source);
+
                     // ['"]結尾
 
                     _symbol = undefined;
@@ -63,8 +61,6 @@ module.exports = Tools;
                 res = /[\s/][^\s\/>]+?\s*?=\s*?(["'])$/.exec(hasChecked);
 
                 if (res != null) {
-
-                    console.log('in attr(%s)', res[1]);
                     // 進入 attr.value
                     // ['"]開頭
 
@@ -73,15 +69,15 @@ module.exports = Tools;
             }
             //-----------------------
             if (_symbol == null) {
-
-                 if (/>/.test(_chart)) {
+                if (/>/.test(_chart)) {
                     // 找到結尾
-                    console.log('findTagEnd>> find >')
 
                     returnValue.content = hasChecked;
                     returnValue.index = j;
                     returnValue.find = true;
 
+                    console.log('findTagEnd>> find >')
+                    console.log('content is =>%s', returnValue.content);
                     console.log('**********');
 
                     return returnValue;
@@ -93,12 +89,10 @@ module.exports = Tools;
         //-----------------------
         // 沒找到結尾
         // 結果是 textNode
-
-        console.log('findTagEnd>> no find >')
-        console.log('**********');
-
         returnValue.content = hasChecked;
         returnValue.index = j;
+        console.log('findTagEnd>> no find >');
+        console.log('**********');
 
         return returnValue;
     };
@@ -115,7 +109,7 @@ module.exports = Tools;
 
         let j = i;
 
-        if(/</.test(content[i])){
+        if (/</.test(content[i])) {
             j = i + 1;
             hasChecked = content[i];
         }
@@ -156,23 +150,103 @@ module.exports = Tools;
     //===========================================
     // 找出 tagName
     // length: 指定要找的長度
-    $o.findNodeNameInTag = function (content, length) {
-        debugger;
+    $o.isCommandTagHead = function (content, length) {
 
-        let res;
         if (length != null) {
             content = content.substr(0, length);
         }
 
-        let reg = /^<(?:\/)?([^\s>/]+?)(?:\s|\/|>)/;
+        // console.log('---(%s)---', content);
 
-        if (reg == null) {
-            throw new Error('cant find tagName');
-        } else {
-            res = reg[1].trim();
+        let res = /^<(%[-=]?)/i.exec(content);
 
-        }
         return res;
     };
+    //===========================================
+    $o.isTagHead = function (rightContent) {
+        let res = /^(<(\/)?([a-z][^\s>/]{0,}?))(?:\s|\/|>)/i.exec(rightContent);
+        return res;
+    };
+    //===========================================
+    $o.findCommandEnd = function (_content, j) {
 
+        let _chart;
+
+        // 指令區 {}
+        let commandCount_1 = 0;
+        // 注釋區
+        let commandCount_2 = 0;
+
+        let _symbol;
+        // _symbol的脫逸
+        let _symbol_1;
+
+        //------------------
+        while ((_chart = _content[j]) != null) {
+
+            let sample = _content.substring(j - 3, j + 1);
+
+            if (commandCount_1 > 0) {
+                debugger;
+                // 在文字區中
+                if (_symbol_1.test(sample)) {
+                    // 脫逸
+
+                    // console.log('遇到脫逸字(%s)', _symbol_1.source);
+                    j++;
+                    continue;
+                }
+
+                if (_symbol.test(_chart)) {
+                    // 遇到分隔符號
+                    commandCount_1--;
+                }
+
+            } else if (commandCount_2 > 0) {
+                // 註釋區
+                debugger;
+
+                if (_symbol.test(sample)) {
+                    commandCount_2--;
+                    _symbol = undefined;
+                }
+            } else {
+                debugger;
+                // 非特異區
+                _symbol = undefined;
+                _symbol_1 = undefined;
+
+                if (/>/.test(_chart)) {
+                    debugger;
+                    let prevChart = _content[j - 1];
+                    if (prevChart != null && /%/.test(prevChart)) {
+                        // 正解
+                        return {
+                            find: true,
+                            index: j
+                        };
+                    }
+                } else if (/[`'"]/.test(_chart)) {
+                    // 文字區
+                    commandCount_1++;
+                    _symbol = RegExp(_chart);
+                    _symbol_1 = RegExp(`\\\\${_chart}$`);
+
+                } else if (/\/\/$/.test(sample)) {
+                    // 註釋區
+                    commandCount_2++;
+
+                    // 換行符號
+                    _symbol = /(\r\n|\n)$/;
+                }
+            }
+            j++;
+        } // while end
+        //------------------
+        return {
+            find: false,
+            index: j
+        };
+    };
+    //===========================================
 })(Tools);

@@ -17,6 +17,9 @@ class Node {
         this.tag_head;
         this.tag_middle;
         this.tag_foot;
+        //------------------
+
+        this.command;
 
     }
     toJSON() {
@@ -29,10 +32,6 @@ class Node {
         }
 
         return res;
-    }
-
-    print() {
-        return (this.source);
     }
 }
 
@@ -95,29 +94,43 @@ class ScriptNode extends Node {
 
         console.log(`script: head(%s) middle(%s) foot(%s)`, this.tag_head, this.tag_middle, this.tag_foot);
 
-        // this._checkType();
-    }
-    //---------------------------------
-    print() {
-        return (this.content || this.source);
+        this._checkType();
     }
     //---------------------------------
     _checkType() {
-        let startTag = this.source.slice(0, (this.startEnd + 1));
 
-        let res = /type=(['"])([^\1]{0,})\1/.exec(startTag);
+        let res = /type=(['"])(.*?)\1/.exec(this.tag_head);
         if (res != null) {
             this.type = res[2];
-            this.type = this.type.trim().toLowerCase();
+            this.type = this.type.trim();
         }
 
         // 特殊 script 標籤 type="text/_"
         // 將轉為 <%  %>
         if (this.type != null && /text\/_/.test(this.type)) {
-            this.category = '%';
-            let endStart = this.source.lastIndexOf('<');
-            this.content = this.source.slice((this.startEnd + 1), (endStart + 1));
+            this.command = '%';
         }
+    }
+}
+////////////////////////////////////////////////////////////////////////////////
+// <% %>
+class _EvaluateNode extends Node {
+    constructor(source) {
+        super('%', source);
+    }
+}
+////////////////////////////////////////////////////////////////////////////////
+// <%= %>
+class _Interpolate extends Node {
+    constructor(source) {
+        super('%=', source);
+    }
+}
+////////////////////////////////////////////////////////////////////////////////
+// <%- ->
+class _Escape extends Node {
+    constructor(source) {
+        super('%-', source);
     }
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -128,5 +141,8 @@ let o = {
     TextNode: TextNode,
     StyleNode: StyleNode,
     ScriptNode: ScriptNode,
+    "_EvaluateNode": _EvaluateNode,
+    "_Interpolate": _Interpolate,
+    "_Escape": _Escape
 };
 module.exports = o;

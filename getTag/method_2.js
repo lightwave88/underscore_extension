@@ -106,7 +106,7 @@ module.exports = methodList;
     methodList['script'] = $o;
     //=================================
     $o.solution = function (_content, i) {
-        // debugger;
+        debugger;
         // console.log(this.info);
 
         let rightSide = _content.substring(i);
@@ -136,12 +136,14 @@ module.exports = methodList;
             // find  script.end
             res = this._findScriptEnd(rightSide, index);
 
+            debugger;
+
             index = res.index;
             find = res.find;
 
-            let tagContent = rightSide.substring(0, index+1);
+            let tagContent = rightSide.substring(0, index + 1);
 
-            r_value.index = index+i;
+            r_value.index = index + i;
             //------------------
             // 相對座標
             let endStart_i = this._findendStart(tagContent);
@@ -159,22 +161,21 @@ module.exports = methodList;
                 r_value.node = new $NodeClass.TextNode(_content);
             }
 
-
         }
         return r_value;
     }
     //=================================
     $o._findScriptEnd = function (content, i) {
+        debugger;
 
         let j = i;
 
-        if(/>/.test(content[i])){
+        if (/>/.test(content[i])) {
             j = i + 1;
         }
 
         let _chart;
 
-        let preContent;
         // 指令區 {}
         let commandCount_1 = 0;
         // 注釋區
@@ -187,13 +188,15 @@ module.exports = methodList;
         //------------------
         while ((_chart = content[j]) != null) {
 
-            let preContent = content.substring(j - 3, j + 1);
+            let sample = content.substring(j - 3, j + 1);
 
             if (commandCount_1 > 0) {
                 debugger;
                 // 在文字區中
-                if (_symbol_1.test(preContent)) {
+                if (_symbol_1.test(sample)) {
                     // 脫逸
+
+                    // console.log('遇到脫逸字(%s)', _symbol_1.source);
                     j++;
                     continue;
                 }
@@ -207,7 +210,7 @@ module.exports = methodList;
                 // 註釋區
                 debugger;
 
-                if (_symbol.test(preContent)) {
+                if (_symbol.test(sample)) {
                     commandCount_2--;
                     _symbol = undefined;
                 }
@@ -221,13 +224,13 @@ module.exports = methodList;
                     // 遇到 <
 
                     // 往後取樣
-                    let sample = content.substr(j + 1, 10);
+                    let sample = content.substr(j, 11);
 
-                    if (/^\/script>/.test(sample)) {
+                    if (/^<\/script>/.test(sample)) {
                         // 正解
 
                         let index = sample.search(/>/);
-                        index += (j + 1);
+                        index = j + index;
                         return {
                             find: true,
                             index: index
@@ -243,7 +246,7 @@ module.exports = methodList;
                     _symbol = RegExp(_chart);
                     _symbol_1 = RegExp(`\\\\${_chart}$`);
 
-                } else if (/\/\/$/.test(preContent)) {
+                } else if (/\/\/$/.test(sample)) {
                     // 註釋區
                     commandCount_2++;
 
@@ -266,13 +269,117 @@ module.exports = methodList;
 
 })(methodList);
 ////////////////////////////////////////////////////////////////////////////////
-(function(methodList){
+(function (methodList) {
     // 處理 <% %>
     let $o = {};
 
     methodList['%'] = $o;
     //=================================
     $o.solution = function (_content, i) {
+        debugger;
+        let rightSide = _content.substring(i);
 
+
+        if (!/^<%/.test(rightSide)) {
+            throw new TypeError('not <% %> tag');
+        }
+        let r_value = {
+            node: null,
+            index: null
+        };
+        let j = i + 2;
+        //------------------
+        let res = $Tools.findCommandEnd(rightSide, j);
+        //------------------
+        debugger;
+        let index = res.index;
+        let find = res.find;
+
+        let content = rightSide.substring(0, index + 1);
+
+        console.log('***<% (%s)', content);
+        r_value.index = index + i;
+
+        if (find) {
+            r_value.node = new $NodeClass['_EvaluateNode'](content);
+        } else {
+            r_value.node = new $NodeClass.TextNode(content);
+        }
+
+        return r_value;
+    };
+})(methodList);
+////////////////////////////////////////////////////////////////////////////////
+(function (methodList) {
+    // 處理 <%- %>
+    let $o = {};
+
+    methodList['%-'] = $o;
+    //=================================
+    $o.solution = function (_content, i) {
+        let rightSide = _content.substring(i);
+
+        if (!/^<%-/.test(rightSide)) {
+            throw new TypeError('not <%- %> tag');
+        }
+        let r_value = {
+            node: null,
+            index: null
+        };
+        let j = i + 3;
+        //------------------
+        let res = $Tools.findCommandEnd(rightSide, j);
+        //------------------
+        let index = res.index;
+        let find = res.find;
+
+        let content = rightSide.substring(i, index+1);
+
+        r_value.index = index + i;
+
+        if (find) {
+            r_value.node = new $NodeClass['_Escape'](content);
+        } else {
+            r_value.node = new $NodeClass.TextNode(content);
+        }
+
+        return r_value;
+    };
+})(methodList);
+////////////////////////////////////////////////////////////////////////////////
+(function (methodList) {
+    // 處理 <%= %>
+    let $o = {};
+
+    methodList['%='] = $o;
+    //=================================
+    $o.solution = function (_content, i) {
+        let rightSide = _content.substring(i);
+
+        if (!/^<%=/.test(rightSide)) {
+            throw new TypeError('not <%= %> tag');
+        }
+        let r_value = {
+            node: null,
+            index: null
+        };
+        let j = i + 3;
+        //------------------
+        let res = $Tools.findCommandEnd(rightSide, j);
+        //------------------
+        let index = res.index;
+        let find = res.find;
+
+        let content = rightSide.substring(i, index+1);
+
+        r_value.index = index + i;
+
+        if (find) {
+            r_value.node = new $NodeClass['_Interpolate'](content);
+        } else {
+            r_value.node = new $NodeClass.TextNode(content);
+        }
+
+        return r_value;
     };
 })(methodList);

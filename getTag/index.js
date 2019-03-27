@@ -8,7 +8,7 @@ const getFileContent = function (_path) {
 }
 //-----------------------
 
-const FindTags = require('./findTags_1b');
+const FindTags = require('./findTags_1c');
 module.exports = {
     findTags: FindTags,
     getFileContent: getFileContent,

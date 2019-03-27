@@ -36,11 +36,11 @@ module.exports = methodList;
     //----------------------------
     // 提供解決
     // 回傳 tag 與 tag 終結的位置
-    $o.solution = function(content, i) {
+    $o.solution = function (content, i) {
         debugger;
 
         let hasChecked = content[i];
-        let j = i+1;
+        let j = i + 1;
 
         while ((_chart = content[j]) != null) {
             // debugger;
