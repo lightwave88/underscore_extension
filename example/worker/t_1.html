@@ -10,8 +10,11 @@
     <script id="script_1" src="../../js_lib/underscore-1.9.1.js"></script>
     <script src="../../js_lib/_extension1/_extension1.php"></script>
     <script>
-        // 設置 worker script 的位置
-        _.worker.workerPath = '../../js_lib/_extension1/_workerScript.js';
+        
+        // 已經不用設置 worker script 的位置
+        // _.worker.workerPath = '../../js_lib/_extension1/worker/_workerScript.js';
+        
+        // _.worker.maxWorkers = 3;
         console.dir(_);
         // 取得 worker 各項參數數值
         console.dir(_.worker.setting);
@@ -28,7 +31,7 @@
             // 指派資料
             data_a = TaipeiHotelData.result.results;
             data_b = JSON.parse(JSON.stringify(data_a));
-            
+
             // console.log('要被搜尋的資料');
             // console.log(JSON.stringify(data_b[500]));
             // 修改其中一項的資料
@@ -49,7 +52,7 @@
             p.then(function (index) {
                 console.timeEnd(time_tag);
                 console.log('time tag(%s) end', time_tag);
-                
+
                 index = Number(index);
                 console.log(JSON.stringify(data_a[index]));
 

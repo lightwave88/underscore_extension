@@ -11,12 +11,24 @@
     <script src="../../js_lib/_extension1/_extension1.php"></script>
     <script src="./extension_file_1.js"></script>
     <script>
-        // 設置 worker script 的位置
-        _.worker.workerPath = '../../js_lib/_extension1/worker/_workerScript.js';
-        let rootPath = location.href.replace(/\/[^/]*$/, '/');
+        // 已經不用設置 worker script 的位置
+        // _.worker.workerPath = '../../js_lib/_extension1/worker/_workerScript.js';
+
+        // 對 worker 加入 importScripts
 
         // 要新加入對 _ 的擴充(無法用相對路徑)
-        let path = location.href + '/../extension_file_1.js';
+        debugger;
+
+        // 設置 importScript.path
+        let path;
+        path = location.href;
+        path = path.replace(/(\/)[^/]+$/, '$1');
+        path += 'extension_file_1.js';
+        
+        
+        // 另一種設置 importScript.path
+        path = location.href + '/../extension_file_1.js';
+         
 
         _.worker.importScript(path);
 
