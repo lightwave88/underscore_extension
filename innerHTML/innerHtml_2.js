@@ -226,8 +226,14 @@ let innerHTML = (function () {
         constructor(dom, parent, index) {
             this.fn = Node;
             this.dom = dom;
+
+            //------------------
+            // 父節點
             this.parent;
+
+            // 在 parent 的排序
             this.index;
+            //------------------
             this.tools = this.fn.tools;
 
             // 標籤頭
@@ -239,8 +245,15 @@ let innerHTML = (function () {
             // 正常標籤會有 tagName
             // 但有些標籤則無
             this.tagName;
+
+            // 所有的標籤都會有
             this.nodeName;
+
+            // 是單標籤還是雙標籤
             this.tagNumber;
+
+            // 非一班標籤
+            // 如 text, comment
             this.text;
             //------------------
 
@@ -259,7 +272,7 @@ let innerHTML = (function () {
             }
         }
         // 取得包括自己的內文
-        getContent() {
+        getAllContent() {
             throw new Error('');
         }
         // 取得兒子不包含自己的內文
@@ -267,13 +280,13 @@ let innerHTML = (function () {
             throw new Error('');
         }
 
-        // 把自己的內文傳給父親
+        // 把自己的內文(要包括自己)傳給父親
         callParent(parentNode) {
             // debugger;
 
             let index = this.index;
 
-            let content = this.getContent();
+            let content = this.getAllContent();
 
             // 把自己的內文傳給父親
             parentNode.contentLis[index] = content;
@@ -353,7 +366,7 @@ let innerHTML = (function () {
             }
         }
 
-        getContent() {
+        getAllContent() {
             debugger;
             let res;
 
@@ -385,7 +398,7 @@ let innerHTML = (function () {
             }
             return res;
         }
-
+        // innerHTML
         getChildContent() {
             let res;
             if ('innerHTML' in dom) {
@@ -401,7 +414,7 @@ let innerHTML = (function () {
 
         constructor(node) {
 
-            if(!(node instanceof Type1Node)){
+            if (!(node instanceof Type1Node)) {
                 throw new Error('');
             }
             let dom = node.dom;
@@ -416,17 +429,16 @@ let innerHTML = (function () {
         }
 
         _cloneNode(node) {
-            debugger;
+            // debugger;
 
             this.tagName = node.tagName;
             this.tagNumber = node.tagNumber;
             this.attrs = node.attrs;
-
             this.tagfoot = node.tagfoot;
             this.tagHead = node.tagHead;
         }
 
-        getContent() {
+        getAllContent() {
             let res;
             if (this.tagNumber == 2) {
                 res = `${this.tagHead}${this.text || ''}${this.tagfoot}`;
@@ -436,6 +448,7 @@ let innerHTML = (function () {
             return res;
         }
 
+        // innerHTML
         getChildContent() {
             let res;
             if ('innerHTML' in dom) {
@@ -444,8 +457,6 @@ let innerHTML = (function () {
             return res;
         }
     }
-
-
     //==========================================================================
 
     if (_) {
@@ -463,7 +474,7 @@ let innerHTML = (function () {
         // 檢查 dom.innerText 內是否有 <% %>, (% %)
         // 若沒有可以直接取 innerHTML
         // 避免耗時運算
-        static check(textContent) {
+        static hasScriptContent(textContent) {
             if (API.checkRule != null) {
                 return API.checkRule(textContent);
             }
@@ -473,6 +484,7 @@ let innerHTML = (function () {
             });
 
             if (res.length == 1) {
+                // 若只有一解
                 API.checkRule = res[0];
                 return true;
             } else if (res.length > 1) {
@@ -481,7 +493,8 @@ let innerHTML = (function () {
             // 內容沒有任何 <% %>, (% %)
             return false;
         }
-
+        // includeRoot:輸出的內容包含 root
+        // rule: 給與自訂規則
         static main(dom, includeRoot, rule) {
 
             includeRoot = !!includeRoot;
@@ -504,10 +517,13 @@ let innerHTML = (function () {
                 //-----------------------
                 if ('innerText' in parentDom) {
                     // 檢測 innerText
-                    let r = API.check(parentDom.innerText);
+                    let r = API.hasScriptContent(parentDom.innerText);
 
                     debugger;
                     if (!r) {
+                        // 若子孫沒有包含 script
+                        // 壓縮成 textNode
+                        parentNode.childContent = undefined;
                         // 轉換節點
                         nodeList[i] = new Type2Node(parentNode);
 
@@ -547,7 +563,7 @@ let innerHTML = (function () {
 
 
             if (includeRoot) {
-                htmlContent = root.getContent();
+                htmlContent = root.getAllContent();
             } else {
                 htmlContent = root.getChildContent();
             }
@@ -571,14 +587,13 @@ let innerHTML = (function () {
 
             if (res == null) {
                 return false;
-            } else if (res[1] != null) {
+            } else {
 
                 // 是否內含 html 標籤
-                let _res = /<(?:\/)?[a-z][^\s>/]{0,}[^<]*?>/i.test(res[1]);
+                let _res = /<(?:\/)?[a-z][^\s>/]{0,}[^<]*?>/i.test(res[1] || '');
 
                 return !_res;
             }
-            return true;
         });
 
         API.ruleList.push(function (textContent) {
@@ -588,14 +603,12 @@ let innerHTML = (function () {
 
             if (res == null) {
                 return false;
-            } else if (res[1] != null) {
+            } else {
                 // 是否內含 html 標籤
-                let _res = /<(?:\/)?[a-z][^\s>/]{0,}[^<]*?>/i.test(res[1]);
+                let _res = /<(?:\/)?[a-z][^\s>/]{0,}[^<]*?>/i.test(res[1] || '');
 
                 return !_res;
             }
-            return true;
-
         });
 
     })();
