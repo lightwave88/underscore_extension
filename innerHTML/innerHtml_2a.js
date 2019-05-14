@@ -515,9 +515,9 @@ let innerHTML = (function () {
                 let parentDom = parentNode.dom;
 
                 //-----------------------
-                if ('innerText' in parentDom) {
-                    // 檢測 innerText
-                    let r = API.hasScriptContent(parentDom.innerText);
+                if ('innerHTML' in parentDom) {
+                    // 檢測 innerHTML
+                    let r = API.hasScriptContent(parentDom.innerHTML);
 
                     debugger;
                     if (!r) {
@@ -581,17 +581,47 @@ let innerHTML = (function () {
         API.ruleList = [];
 
         API.ruleList.push(function (textContent) {
-            let reg = /<%([\s\S]*?)%>/i;
+            debugger;
 
-            let res = reg.test(textContent);
-            return res;
+            let reg = /&lt;%([\s\S]*?)%&gt;/i;
+
+            let res;
+            while((res = reg.exec(textContent))!= null){
+                debugger;
+
+                if(!/<(?:\/)?[a-z][^\s>/]{0,}[^<]*?>/i.test(res[1] || '')){
+                    // 有其他標籤在其中
+                    // 不正確的標籤
+                    return true;
+                }
+
+                let index = res.index + res[0].length;
+                textContent = textContent.substring(index);
+            }
+
+            return false;
         });
 
         API.ruleList.push(function (textContent) {
+            debugger;
+
             let reg = /\(%([\s\S]*?)%\)/i;
 
-            let res = reg.test(textContent);
-            return res;
+            let res;
+            while((res = reg.exec(textContent))!= null){
+                debugger;
+
+                if(!/<(?:\/)?[a-z][^\s>/]{0,}[^<]*?>/i.test(res[1] || '')){
+                    // 有其他標籤在其中
+                    // 不正確的標籤
+                    return true;
+                }
+
+                let index = res.index + res[0].length;
+                textContent = textContent.substring(index);
+            }
+
+            return false;
         });
 
     })();
