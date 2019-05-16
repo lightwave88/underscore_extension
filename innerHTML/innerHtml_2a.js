@@ -296,7 +296,7 @@ let innerHTML = (function () {
         }
     }
     Node.tools = new Tools();
-
+    //==========================================================================
     // 一般節點
     class Type1Node extends Node {
         constructor(dom, parent, index) {
@@ -379,7 +379,7 @@ let innerHTML = (function () {
                         res = `<!--${this.text}-->`;
                         break;
                     default:
-                        console.log(`>>problem tag (${this.tagName})`);
+                        console.warn(`>>problem tag (${this.tagName})`);
 
                         // 真的不知道如何處理這怪異的 tag
                         // 會被忽視
@@ -407,7 +407,7 @@ let innerHTML = (function () {
             return res;
         }
     }
-
+    //==========================================================================
     // 特殊節點
     // 把內容不含 <% %>, (% %) 的節點直接壓縮成 textNode
     class Type2Node extends Node {
@@ -586,13 +586,13 @@ let innerHTML = (function () {
             let reg = /&lt;%([\s\S]*?)%&gt;/i;
 
             let res;
+
             while((res = reg.exec(textContent))!= null){
                 debugger;
 
                 if(!/<(?:\/)?[a-z][^\s>/]{0,}[^<]*?>/i.test(res[1] || '')){
-                    // 有其他標籤在其中
-                    // 不正確的標籤
-                    return true;
+                    // 正確的標籤
+                    return  true;
                 }
 
                 let index = res.index + res[0].length;
@@ -612,15 +612,14 @@ let innerHTML = (function () {
                 debugger;
 
                 if(!/<(?:\/)?[a-z][^\s>/]{0,}[^<]*?>/i.test(res[1] || '')){
-                    // 有其他標籤在其中
-                    // 不正確的標籤
+                    // 正確的標籤
                     return true;
                 }
 
                 let index = res.index + res[0].length;
                 textContent = textContent.substring(index);
+                i++;
             }
-
             return false;
         });
 
