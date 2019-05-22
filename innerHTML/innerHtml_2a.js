@@ -590,7 +590,7 @@ let innerHTML = (function () {
             while((res = reg.exec(textContent))!= null){
                 debugger;
 
-                if(!/<(?:\/)?[a-z][^\s>/]{0,}[^<]*?>/i.test(res[1] || '')){
+                if(!/<[/]?(?:[a-z][^\s>/]{0,})(?:>|\s[\s\S]*?>)/.test(res[1] || '')){
                     // 正確的標籤
                     return  true;
                 }
@@ -611,7 +611,7 @@ let innerHTML = (function () {
             while((res = reg.exec(textContent))!= null){
                 debugger;
 
-                if(!/<(?:\/)?[a-z][^\s>/]{0,}[^<]*?>/i.test(res[1] || '')){
+                if(!/<[/]?(?:[a-z][^\s>/]{0,})(?:>|\s[\s\S]*?>)/i.test(res[1] || '')){
                     // 正確的標籤
                     return true;
                 }
