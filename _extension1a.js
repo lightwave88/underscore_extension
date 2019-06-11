@@ -116,21 +116,31 @@ let Output = (function (_g) {
     //==========================================================================
 
     class ImportModules {
-        static importModules(m) {
+        static importModules(key, m) {
+
+            if (typeof key != 'string') {
+                throw new TypeError(`importModules args[0] must be string`);
+            }
+
+            if (typeof m != 'object' || m == null) {
+                throw new TypeError(`importModules args[1] must be object`);
+            }
 
             if (m.factory == null) {
                 return;
             }
 
             if (G._ == null) {
-                if(ImportModules.importModuleList == null){
-                    ImportModules.importModuleList = [];
+                if (ImportModules.importModuleList == null) {
+                    ImportModules.importModuleList = new Map();
                 }
 
-                importModuleList.push(m);
+                importModuleList.set(key, m);
             } else {
-                m.factory(G);
-                delete m.factory;
+                if (!(key in G._)) {
+                    m.factory(G);
+                    delete m.factory;
+                }
             }
         }
         //-----------------------
@@ -139,9 +149,11 @@ let Output = (function (_g) {
                 return;
             }
 
-            importModuleList.forEach(function (m) {
-                m.factory(G);
-                delete m.factory;
+            importModuleList.forEach(function (m, key) {
+                if (!(key in G._)) {
+                    m.factory(G);
+                    delete m.factory;
+                }
             });
 
             importModuleList = null;
@@ -185,11 +197,13 @@ let Output = (function (_g) {
 
     //==========================================================================
 
-    Output.importModules = function(){
+    Output.importModules = function (m) {
         ImportModules.importModules(m);
     };
 
 })(this || {});
 
+// 個模組匯入的方式
+// 方便 php 的彙整
 const importModules = Output.importModules;
 Output = undefined;
