@@ -1,0 +1,1 @@
+export { webWorker } from './module/main_1.js';
